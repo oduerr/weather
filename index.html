@@ -67,6 +67,7 @@
 
     <span id="status">✅ Ready</span>
     <button onclick="window.open('https://www.meteoradar.ch/bilder/mch_aktuell.php', '_blank')">🌧️ Radar</button>
+    <button onclick="localStorage.clear(); console.log('🧹 Cache cleared'); location.reload();" style="font-size: 10px; padding: 2px 4px;">🧹 Clear Cache</button>
     <span id="konstanzTemperature"></span>
 
     <!-- Add View Range Selection Buttons -->
@@ -258,12 +259,23 @@
       const CACHE_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
       const cacheKey = `${selectedLoc.lat},${selectedLoc.lon},${selectedModel.id}`;
       const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
+      
+      console.log("🔍 DEBUG: Cache key:", cacheKey);
+      console.log("🔍 DEBUG: Cached data exists:", !!cachedData[cacheKey]);
+      
       if (cachedData[cacheKey]) {
         const cachedEntry = cachedData[cacheKey];
+        console.log("🔍 DEBUG: Cached entry structure:", Object.keys(cachedEntry));
+        console.log("🔍 DEBUG: Cached data structure:", Object.keys(cachedEntry.data));
+        console.log("🔍 DEBUG: Cached data has hourly:", !!cachedEntry.data.hourly);
+        if (cachedEntry.data.hourly) {
+          console.log("🔍 DEBUG: Cached hourly keys:", Object.keys(cachedEntry.data.hourly));
+        }
+        console.log("🔍 DEBUG: Cache age (minutes):", (Date.now() - cachedEntry.timestamp) / 60000);
 
         // ✅ Check if cache is still valid
         if (Date.now() - cachedEntry.timestamp < CACHE_EXPIRATION_MS) {
-          console.log("Using cached data for", selectedLoc.name);
+          console.log("✅ Using cached data for", selectedLoc.name);
           processWeatherData(cachedEntry.data, selectedLoc, selectedModel);
           statusElement.textContent = `Loaded from cache (${selectedLoc.name})`;
           return;
@@ -300,10 +312,14 @@
         latitude: selectedLoc.lat,
         longitude: selectedLoc.lon,
         hourly: hourlyVars.join(","),
-        daily: dailyVars.join(","),
         "timezone": "Europe/Berlin",
         models: selectedModel.model,
       });
+      
+      // Only add daily parameters for deterministic models
+      if (selectedModel.type !== "ensemble") {
+        params.append("daily", dailyVars.join(","));
+      }
 
       // Fetch new data
       console.log("🔍 DEBUG: Fetching data from:", apiUrl + params.toString());
@@ -434,6 +450,11 @@
       // Make Date Objects for all sunrises and sunsets
       const sunrises = (data.daily && data.daily.sunrise || []).map(sunrise => new Date(sunrise));
       const sunsets = (data.daily && data.daily.sunset || []).map(sunset => new Date(sunset));
+      
+      console.log("🔍 DEBUG: Daily data available:", !!data.daily);
+      if (data.daily) {
+        console.log("🔍 DEBUG: Daily data keys:", Object.keys(data.daily));
+      }
 
       // Build traces for 3 rows:
       // Row 1: Temperature, Dew Point, Humidity, and Weather Icons
@@ -476,19 +497,21 @@
 
       // Night shading: create rectangles for each night period
       const nightShading = [];
-      for (let i = 0; i < sunrises.length - 1; i++) {
-        // Define the night period as the time between sunset[i] and sunrise[i+1]
-        nightShading.push({
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: sunsets[i],   // Start of the night (sunset)
-          x1: sunrises[i + 1], // End of the night (next sunrise)
-          y0: 0, y1: 1,  // Full height (paper coordinates from 0 to 1)
-          fillcolor: "rgba(0, 0, 0, 0.08)", // Semi-transparent black for night shading
-          layer: "below",
-          line: { width: 0 }
-        });
+      if (sunrises.length > 0 && sunsets.length > 0) {
+        for (let i = 0; i < sunrises.length - 1; i++) {
+          // Define the night period as the time between sunset[i] and sunrise[i+1]
+          nightShading.push({
+            type: "rect",
+            xref: "x",
+            yref: "paper",
+            x0: sunsets[i],   // Start of the night (sunset)
+            x1: sunrises[i + 1], // End of the night (next sunrise)
+            y0: 0, y1: 1,  // Full height (paper coordinates from 0 to 1)
+            fillcolor: "rgba(0, 0, 0, 0.08)", // Semi-transparent black for night shading
+            layer: "below",
+            line: { width: 0 }
+          });
+        }
       }
 
       // "Now" vertical line (using current local time)

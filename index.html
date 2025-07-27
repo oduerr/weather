@@ -67,7 +67,6 @@
 
     <span id="status">✅ Ready</span>
     <button onclick="window.open('https://www.meteoradar.ch/bilder/mch_aktuell.php', '_blank')">🌧️ Radar</button>
-    <button onclick="localStorage.clear(); console.log('🧹 Cache cleared'); location.reload();" style="font-size: 10px; padding: 2px 4px;">🧹 Clear Cache</button>
     <span id="konstanzTemperature"></span>
 
     <!-- Add View Range Selection Buttons -->
@@ -260,18 +259,8 @@
       const cacheKey = `${selectedLoc.lat},${selectedLoc.lon},${selectedModel.id}`;
       const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
       
-      console.log("🔍 DEBUG: Cache key:", cacheKey);
-      console.log("🔍 DEBUG: Cached data exists:", !!cachedData[cacheKey]);
-      
       if (cachedData[cacheKey]) {
         const cachedEntry = cachedData[cacheKey];
-        console.log("🔍 DEBUG: Cached entry structure:", Object.keys(cachedEntry));
-        console.log("🔍 DEBUG: Cached data structure:", Object.keys(cachedEntry.data));
-        console.log("🔍 DEBUG: Cached data has hourly:", !!cachedEntry.data.hourly);
-        if (cachedEntry.data.hourly) {
-          console.log("🔍 DEBUG: Cached hourly keys:", Object.keys(cachedEntry.data.hourly));
-        }
-        console.log("🔍 DEBUG: Cache age (minutes):", (Date.now() - cachedEntry.timestamp) / 60000);
 
         // ✅ Check if cache is still valid
         if (Date.now() - cachedEntry.timestamp < CACHE_EXPIRATION_MS) {
@@ -322,22 +311,9 @@
       }
 
       // Fetch new data
-      console.log("🔍 DEBUG: Fetching data from:", apiUrl + params.toString());
-      console.log("🔍 DEBUG: Selected model:", selectedModel);
-      
       fetch(apiUrl + params.toString())
-        .then(res => {
-          console.log("🔍 DEBUG: Response status:", res.status);
-          console.log("🔍 DEBUG: Response headers:", res.headers);
-          return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
-          console.log("🔍 DEBUG: Received data:", data);
-          console.log("🔍 DEBUG: Data structure:", Object.keys(data));
-          if (data.hourly) {
-            console.log("🔍 DEBUG: Hourly data keys:", Object.keys(data.hourly));
-            console.log("🔍 DEBUG: Hourly data sample:", data.hourly);
-          }
           
           // ✅ Store new data in cache
           cachedData[cacheKey] = {
@@ -350,9 +326,8 @@
           statusElement.textContent = `Data updated at ${new Date().toLocaleTimeString()}`;
         })
         .catch(err => {
-          console.error("🚨 Error fetching data:", err);
-          console.error("🚨 Error details:", err.message, err.stack);
-          statusElement.textContent = "Error fetching data: " + err.message;
+          console.error("Error fetching data:", err);
+          statusElement.textContent = "Error fetching data";
         });
     }
 
@@ -360,14 +335,8 @@
     function create_continuous_ensemble_traces(hourly, variable_name, yaxis = "y1", color = "red") {
       const traces = [];
 
-      // 🔍 Enhanced Debugging
-      console.log("🔍 ENSEMBLE DEBUG: Available Keys in hourly:", Object.keys(hourly));
-      console.log("🔍 ENSEMBLE DEBUG: Processing variable:", variable_name);
-      console.log("🔍 ENSEMBLE DEBUG: Looking for pattern:", variable_name + "_member");
-
       // Extract base variable (e.g., "temperature_2m")
       if (hourly[variable_name]) {
-        console.log(`✅ Found base variable ${variable_name}:`, hourly[variable_name].slice(0, 5), "...");
         traces.push({
           x: hourly.time,
           y: hourly[variable_name],
@@ -377,15 +346,13 @@
           yaxis: yaxis
         });
       } else {
-        console.warn(`⚠️ Base variable ${variable_name} not found!`);
+        console.warn(`Base variable ${variable_name} not found!`);
       }
 
       // Extract ensemble members dynamically
       const memberKeys = Object.keys(hourly).filter(key => key.startsWith(variable_name + "_member"));
-      console.log(`🔍 ENSEMBLE DEBUG: Found ${memberKeys.length} member keys:`, memberKeys);
       
       memberKeys.forEach(key => {
-        console.log(`🔍 ENSEMBLE DEBUG: Processing member ${key}:`, hourly[key].slice(0, 5), "...");
         traces.push({
           x: hourly.time,
           y: hourly[key],
@@ -397,7 +364,6 @@
         });
       });
       
-      console.log(`✅ Created ${traces.length} traces for ${variable_name} (1 main + ${memberKeys.length} members)`);
       return traces;
     }
 
@@ -451,10 +417,7 @@
       const sunrises = (data.daily && data.daily.sunrise || []).map(sunrise => new Date(sunrise));
       const sunsets = (data.daily && data.daily.sunset || []).map(sunset => new Date(sunset));
       
-      console.log("🔍 DEBUG: Daily data available:", !!data.daily);
-      if (data.daily) {
-        console.log("🔍 DEBUG: Daily data keys:", Object.keys(data.daily));
-      }
+
 
       // Build traces for 3 rows:
       // Row 1: Temperature, Dew Point, Humidity, and Weather Icons
@@ -529,27 +492,17 @@
 
       // Build all traces
       let allTraces;
-      console.log("🔍 DEBUG: Model type is:", model.type);
       if (model.type === "ensemble") {
-        console.log("🔍 DEBUG: Building ensemble traces...");
-        console.log("🔍 DEBUG: Temp ensemble traces:", traceTempEnsemble.length);
-        console.log("🔍 DEBUG: Humidity ensemble traces:", traceHumEnsemble.length);
-        console.log("🔍 DEBUG: Precip ensemble traces:", tracePrecipEnsemble.length);
-        console.log("🔍 DEBUG: Cloud ensemble traces:", traceCloudEnsemble.length);
-        
         allTraces = [
           ...traceTempEnsemble, ...traceHumEnsemble, ...tracePrecipEnsemble, ...traceCloudEnsemble,
         ];
-        console.log("🔍 DEBUG: Total ensemble traces:", allTraces.length);
       } else {
-        console.log("🔍 DEBUG: Building deterministic traces...");
         allTraces = [
           traceTemp, traceDew, traceHum, traceIcons,
           tracePrecip, tracePrecipProb, traceSunshine,
           traceCloudLow, traceCloudMid, traceCloudHigh, traceCloudTotal,
           traceVisibility
         ];
-        console.log("🔍 DEBUG: Total deterministic traces:", allTraces.length);
       }
 
       // Build layout: using grid for 3 rows and a lower separate x-axis for date labels (if desired)

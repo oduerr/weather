@@ -313,53 +313,112 @@ document.addEventListener('DOMContentLoaded', function() {
   const plot = document.getElementById('plot');
   const fadeTrigger = document.getElementById('fade-trigger');
   let fadeTimeout;
+  let isControlsVisible = true;
+  let lastInteractionTime = Date.now();
 
   // Function to show controls
   function showControls() {
-    controls.classList.remove('fade-out');
-    controls.classList.add('fade-in');
-    plot.classList.add('with-controls');
+    if (!isControlsVisible) {
+      controls.classList.remove('fade-out');
+      controls.classList.add('fade-in');
+      plot.classList.add('with-controls');
+      isControlsVisible = true;
+    }
+    lastInteractionTime = Date.now();
     clearTimeout(fadeTimeout);
   }
 
   // Function to hide controls
   function hideControls() {
-    controls.classList.remove('fade-in');
-    controls.classList.add('fade-out');
-    plot.classList.remove('with-controls');
+    if (isControlsVisible) {
+      controls.classList.remove('fade-in');
+      controls.classList.add('fade-out');
+      plot.classList.remove('with-controls');
+      isControlsVisible = false;
+    }
+  }
+
+  // Function to schedule hiding with proper timing
+  function scheduleHide() {
+    clearTimeout(fadeTimeout);
+    const timeSinceLastInteraction = Date.now() - lastInteractionTime;
+    const remainingDelay = Math.max(3000 - timeSinceLastInteraction, 1000);
+    
+    fadeTimeout = setTimeout(() => {
+      // Only hide if no recent interactions
+      if (Date.now() - lastInteractionTime >= 3000) {
+        hideControls();
+      }
+    }, remainingDelay);
   }
 
   // Show controls on hover/touch of trigger area
   fadeTrigger.addEventListener('mouseenter', showControls);
-  fadeTrigger.addEventListener('touchstart', showControls);
+  fadeTrigger.addEventListener('touchstart', showControls, { passive: true });
 
   // Show controls when interacting with controls
   controls.addEventListener('mouseenter', showControls);
-  controls.addEventListener('touchstart', showControls);
+  controls.addEventListener('touchstart', showControls, { passive: true });
 
-  // Hide controls after delay when not interacting
-  function scheduleHide() {
-    fadeTimeout = setTimeout(hideControls, 3000); // 3 second delay
-  }
-
+  // Schedule hide on mouse/touch leave
   fadeTrigger.addEventListener('mouseleave', scheduleHide);
   controls.addEventListener('mouseleave', scheduleHide);
 
   // Show controls on any interaction with the page
   document.addEventListener('click', showControls);
-  document.addEventListener('touchstart', showControls);
+  document.addEventListener('touchstart', showControls, { passive: true });
 
-  // Auto-hide controls after initial load
-  setTimeout(hideControls, 5000); // Hide after 5 seconds
-
-  // Show controls on scroll (mobile)
+  // Show controls on scroll (mobile) with debouncing
+  let scrollTimeout;
   let lastScrollTop = 0;
   window.addEventListener('scroll', function() {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     if (Math.abs(scrollTop - lastScrollTop) > 10) {
       showControls();
-      scheduleHide();
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(scheduleHide, 1000);
     }
     lastScrollTop = scrollTop;
   });
+
+  // Auto-hide controls after initial load
+  setTimeout(() => {
+    if (isControlsVisible) {
+      hideControls();
+    }
+  }, 5000);
+
+  // Ensure controls are visible when page becomes visible
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      showControls();
+      scheduleHide();
+    }
+  });
+
+  // Handle window focus events
+  window.addEventListener('focus', function() {
+    showControls();
+    scheduleHide();
+  });
+
+  // Debug function to check fade state (can be removed in production)
+  window.debugFadeState = function() {
+    console.log('Controls visible:', isControlsVisible);
+    console.log('Fade classes:', controls.className);
+    console.log('Time since last interaction:', Date.now() - lastInteractionTime);
+  };
+
+  // Test function to manually trigger fade (for debugging)
+  window.testFade = function() {
+    console.log('Testing fade controls...');
+    showControls();
+    setTimeout(() => {
+      console.log('Hiding controls in 2 seconds...');
+      hideControls();
+    }, 2000);
+  };
+
+  // Log initial state
+  console.log('Fade controls initialized. Use debugFadeState() to check state.');
 });

@@ -32,18 +32,22 @@
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      transition: all 0.3s ease;
+      transition: transform 0.3s ease, opacity 0.3s ease;
       transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
     }
 
     #controls.fade-out {
       transform: translateY(-100%);
       opacity: 0;
+      pointer-events: none;
     }
 
     #controls.fade-in {
       transform: translateY(0);
       opacity: 1;
+      pointer-events: auto;
     }
 
     select,

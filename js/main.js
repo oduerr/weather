@@ -2,8 +2,27 @@ let measured_temp = null;
 let measured_water_temp = null;
 
 // ------------------------------
-// 1) Define Available Locations & Models
+// 1) Configuration and Panel System
 // ------------------------------
+
+// Import configuration (using global objects for file:// compatibility)
+// Note: In a real ES module setup, this would be:
+// import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
+
+// For now, we'll define the configuration inline to maintain file:// compatibility
+const PANELS = ['temperature'];
+const PANEL_CONFIG = {
+  temperature: {
+    enabled: true,
+    title: 'Temperature',
+    description: 'Temperature forecast with ensemble data',
+    defaultView: '2d',
+    showEnsemble: true,
+    showCurrent: true
+  }
+};
+
+// Available locations and models (keeping existing structure for compatibility)
 const locations = [
   { name: "🇩🇪 Konstanz", lat: 47.6952, lon: 9.1307 },
   { name: "🇨🇭 🏔️ Chäserrugg", lat: 47.1549, lon: 9.3128 },
@@ -176,7 +195,23 @@ async function fetchAndPlot() {
   
   try {
     const data = await window.WeatherAPI.getWeatherDataWithFallback(selectedLoc, selectedModel);
-    processWeatherData(data, selectedLoc, selectedModel);
+    
+    // Loop over enabled panels and render each one
+    PANELS.forEach(panelName => {
+      const panelConfig = PANEL_CONFIG[panelName];
+      if (panelConfig && panelConfig.enabled) {
+        console.log(`Rendering panel: ${panelName}`);
+        
+        // Use the visualizer registry to render the panel
+        if (window.VisRegistry && window.VisRegistry.renderPanel) {
+          window.VisRegistry.renderPanel(panelName, data, selectedLoc, selectedModel, panelConfig);
+        } else {
+          // Fallback to direct rendering if registry is not available
+          processWeatherData(data, selectedLoc, selectedModel);
+        }
+      }
+    });
+    
     statusElement.textContent = `Data updated at ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     console.error("Error fetching data:", err);

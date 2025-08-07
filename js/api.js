@@ -57,7 +57,7 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
   if (model.type === "ensemble") {
     hourlyVars = [
       "temperature_2m", "relative_humidity_2m",
-      "precipitation", "cloud_cover"
+      "precipitation", "cloud_cover", "weather_code"
     ];
     apiUrl = `https://ensemble-api.open-meteo.com/v1/ensemble?`;
   } else {

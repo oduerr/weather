@@ -50,6 +50,48 @@ window.WeatherPlot.createContinuousEnsembleTraces = function(hourly, variable_na
 };
 
 /**
+ * Calculate mode (most frequent value) from ensemble members
+ * @param {Object} hourly - Hourly data object
+ * @param {string} variable_name - Variable name to calculate mode for
+ * @returns {Array} Array of mode values for each time step
+ */
+window.WeatherPlot.calculateEnsembleMode = function(hourly, variable_name) {
+  const memberKeys = Object.keys(hourly).filter(key => key.startsWith(variable_name) && key.includes('member'));
+  const timeSteps = hourly.time.length;
+  const modes = new Array(timeSteps).fill(null);
+
+  for (let i = 0; i < timeSteps; i++) {
+    const counts = {};
+    let maxCount = 0;
+    let modeValue = null;
+
+    // Collect all values for the current time step across all members
+    const valuesAtTimeStep = [];
+    if (hourly[variable_name] && hourly[variable_name][i] !== undefined) {
+        valuesAtTimeStep.push(hourly[variable_name][i]); // Include the control run if available
+    }
+    memberKeys.forEach(key => {
+      if (hourly[key] && hourly[key][i] !== undefined) {
+        valuesAtTimeStep.push(hourly[key][i]);
+      }
+    });
+
+    // Calculate frequency for each value
+    valuesAtTimeStep.forEach(value => {
+      if (value !== null) { // Ignore null values
+        counts[value] = (counts[value] || 0) + 1;
+        if (counts[value] > maxCount) {
+          maxCount = counts[value];
+          modeValue = value;
+        }
+      }
+    });
+    modes[i] = modeValue;
+  }
+  return modes;
+};
+
+/**
  * Render weather data as a Plotly chart
  * @param {Object} data - Weather data object
  * @param {Object} location - Location object with lat, lon, name
@@ -136,6 +178,23 @@ window.WeatherPlot.renderWeatherData = function(data, location, model) {
   const traceHumEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "relative_humidity_2m", "y2", "blue");
   const tracePrecipEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "precipitation", "y3", "skyblue");
   const traceCloudEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "cloud_cover", "y5", "black");
+  
+  // Weather code ensemble mode trace
+  let traceWeatherCodeEnsemble = [];
+  if (model.type === "ensemble" && hourly.weather_code) {
+    const weatherCodeMode = window.WeatherPlot.calculateEnsembleMode(hourly, "weather_code");
+    const weatherCodeModeIcons = weatherCodeMode.map(code => weatherIconMap[code] || "");
+    
+    traceWeatherCodeEnsemble = [{
+      x: timesLocal,
+      y: temperature.map(t => t + 2), // Position slightly above temperature
+      mode: 'text',
+      text: weatherCodeModeIcons,
+      textfont: { size: 20, color: 'purple' },
+      name: 'Weather Code Mode',
+      yaxis: "y1"
+    }];
+  }
 
   // Night shading: create rectangles for each night period
   const nightShading = [];
@@ -174,6 +233,7 @@ window.WeatherPlot.renderWeatherData = function(data, location, model) {
   if (model.type === "ensemble") {
     allTraces = [
       ...traceTempEnsemble, ...traceHumEnsemble, ...tracePrecipEnsemble, ...traceCloudEnsemble,
+      ...traceWeatherCodeEnsemble,
     ];
   } else {
     allTraces = [
@@ -245,7 +305,17 @@ window.WeatherPlot.renderWeatherData = function(data, location, model) {
     annotations: weekdayAnnotations  // ✅ Add weekday labels at noon
   }; // End of layout
 
-  Plotly.newPlot('plot', allTraces, layout);
+  Plotly.newPlot('plot', allTraces, layout).then(() => {
+    // Set initial view to show all data (no empty days)
+    const plotDiv = document.getElementById('plot');
+    const startTime = plotDiv.getAttribute('data-start-time');
+    const endTime = plotDiv.getAttribute('data-end-time');
+    
+    // Set the initial view to exactly match the data range
+    Plotly.relayout('plot', {
+      'xaxis.range': [startTime, endTime]
+    });
+  });
 };
 
 /**

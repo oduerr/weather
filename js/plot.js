@@ -169,7 +169,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model) {
         };
         weatherStationTraces.push(traceStationTemp);
         
-        // Add water temperature after sunset
+        // Add water if available
         if (stationData.waterTemperature.length) {
           console.log("📊 Water temperature data available:", stationData.waterTemperature.length, "measurements");
           

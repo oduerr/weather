@@ -419,6 +419,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000);
   };
 
+  // Test function for fade button
+  window.testFadeButton = function() {
+    const fadeButton = document.getElementById('fade-button');
+    if (fadeButton) {
+      console.log('Testing fade button...');
+      fadeButton.click();
+    } else {
+      console.log('Fade button not found');
+    }
+  };
+
+  // Fade button functionality
+  const fadeButton = document.getElementById('fade-button');
+  if (fadeButton) {
+    fadeButton.addEventListener('click', function(event) {
+      // Prevent this click from triggering the page-wide show controls
+      event.stopPropagation();
+      
+      console.log('Fade button clicked, current state:', isControlsVisible);
+      
+      if (isControlsVisible) {
+        hideControls();
+        fadeButton.textContent = '👁️‍🗨️'; // Show "eye with speech bubble" when hidden
+        fadeButton.title = 'Show Controls';
+        console.log('Controls hidden');
+      } else {
+        showControls();
+        fadeButton.textContent = '👁️'; // Show "eye" when visible
+        fadeButton.title = 'Hide Controls';
+        console.log('Controls shown');
+      }
+    });
+    
+    console.log('✅ Fade button event listener attached');
+  } else {
+    console.log('⚠️ Fade button not found');
+  }
+
   // Log initial state
   console.log('Fade controls initialized. Use debugFadeState() to check state.');
 });

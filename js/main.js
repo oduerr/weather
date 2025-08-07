@@ -276,7 +276,33 @@ document.getElementById("viewAll").addEventListener("click", function() {
 const viewBtns = document.querySelectorAll('.view-btn');
 viewBtns.forEach(btn => {
   btn.addEventListener('click', function() {
-    viewBtns.forEach(b => b.style.fontWeight = 'normal');
-    this.style.fontWeight = 'bold';
+    viewBtns.forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Mobile-specific improvements
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle mobile orientation changes
+  window.addEventListener('orientationchange', function() {
+    setTimeout(() => {
+      // Re-render the plot with new dimensions
+      if (window.WeatherPlot && window.WeatherPlot.renderWeatherData) {
+        // Trigger a re-plot with current data
+        const event = new Event('resize');
+        window.dispatchEvent(event);
+      }
+    }, 500);
+  });
+
+  // Handle window resize for mobile
+  window.addEventListener('resize', function() {
+    if (window.WeatherPlot && window.WeatherPlot.renderWeatherData) {
+      // Update plot dimensions
+      Plotly.relayout('plot', {
+        width: window.innerWidth,
+        height: Math.max(window.innerHeight - 120, 400)
+      });
+    }
   });
 });

@@ -515,7 +515,7 @@ window.WeatherPlot.renderUVWindData = function(data, location, model) {
     },
     showtitle: true,
     width: window.innerWidth,
-    height: window.innerHeight * 0.98,
+    height: Math.max(window.innerHeight - 120, 400), // Mobile-friendly height
     grid: { rows: 3, columns: 1, pattern: "independent" },
 
     // X-axis settings

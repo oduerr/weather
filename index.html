@@ -5,81 +5,165 @@
   <meta charset="UTF-8">
   <title>⛅ Forecast</title>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
       padding: 0;
-      font-size: 11px;
+      font-size: 14px;
+      overflow-x: hidden;
     }
 
-    /* 🔹 Floating Controls (Compact) */
+    /* 🔹 Mobile-Friendly Controls */
     #controls {
-      position: absolute;
-      top: 0px;
-      left: 10px;
-      background: rgba(255, 255, 255, 0.8);
-      padding: 5px 8px;
-      border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      z-index: 10;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
     }
 
     select,
     #status {
-      font-size: 11px;
-      padding: 2px 4px;
-      margin-right: 5px;
+      font-size: 14px;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: white;
+      min-height: 44px; /* Touch-friendly height */
     }
 
-    /* 🔹 Ensure Plot Fills the Screen */
+    select {
+      min-width: 120px;
+      flex: 1;
+    }
+
+    /* 🔹 Mobile Plot Container */
     #plot {
       width: 100vw;
-      height: 100vh;
-      /* Uses almost full height */
+      height: calc(100vh - 80px); /* Account for controls */
+      margin-top: 80px; /* Space for controls */
     }
 
-    /* Style for view buttons */
+    /* Mobile-friendly view buttons */
     .view-btn {
-      padding: 2px 5px;
-      margin: 0 2px;
-      font-size: 10px;
+      padding: 10px 15px;
+      margin: 0 4px;
+      font-size: 14px;
       cursor: pointer;
-      border-radius: 3px;
-      border: 1px solid #ccc;
-      background: #f5f5f5;
+      border-radius: 8px;
+      border: 1px solid #007AFF;
+      background: #007AFF;
+      color: white;
+      min-height: 44px;
+      min-width: 44px;
+      transition: all 0.2s ease;
     }
 
-    .view-btn:hover {
-      background: #e9e9e9;
+    .view-btn:hover,
+    .view-btn:active {
+      background: #0056CC;
+      transform: scale(0.98);
+    }
+
+    .view-btn.active {
+      background: #0056CC;
+      font-weight: bold;
+    }
+
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+      #controls {
+        padding: 8px;
+        gap: 6px;
+      }
+      
+      select,
+      #status {
+        font-size: 13px;
+        padding: 6px 10px;
+      }
+      
+      .view-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #controls {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 6px;
+      }
+      
+      select,
+      #status {
+        margin-bottom: 4px;
+      }
+      
+      .view-btn {
+        flex: 1;
+        margin: 2px;
+      }
+    }
+
+    /* Hide scrollbars on mobile */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 </head>
 
 <body>
-  <!-- 🔹 Floating Controls (Top-Left Corner) -->
+  <!-- 🔹 Mobile-Friendly Controls -->
   <div id="controls">
-    <label for="locationSelect">📍</label>
-    <select id="locationSelect"></select>
-
-    <label for="modelSelect"></label>
-    <select id="modelSelect"></select>
-
-    <label for="panelSelect">📊</label>
-    <select id="panelSelect">
-      <option value="temperature">🌡️ Temperature</option>
-      <option value="uv_wind">☀️ UV & Wind</option>
-    </select>
-
-    <span id="status">✅ Ready</span>
-    <button onclick="window.open('https://www.meteoradar.ch/bilder/mch_aktuell.php', '_blank')">🌧️ Radar</button>
-    <span id="konstanzTemperature"></span>
-
-    <!-- Add View Range Selection Buttons -->
-    <span style="margin-left: 10px;">View: </span>
-    <button id="view2d" class="view-btn">2d</button>
-    <button id="view5d" class="view-btn">5d</button>
-    <button id="viewAll" class="view-btn">All</button>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+        <label for="locationSelect">📍</label>
+        <select id="locationSelect"></select>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+        <label for="modelSelect">🌤️</label>
+        <select id="modelSelect"></select>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+        <label for="panelSelect">📊</label>
+        <select id="panelSelect">
+          <option value="temperature">🌡️ Temperature</option>
+          <option value="uv_wind">☀️ UV & Wind</option>
+        </select>
+      </div>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px;">
+      <span id="status">✅ Ready</span>
+      <button onclick="window.open('https://www.meteoradar.ch/bilder/mch_aktuell.php', '_blank')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #007AFF; background: #007AFF; color: white; font-size: 14px; min-height: 44px;">🌧️ Radar</button>
+      <span id="konstanzTemperature"></span>
+      
+      <!-- Mobile-friendly View Range Buttons -->
+      <div style="display: flex; gap: 4px;">
+        <button id="view2d" class="view-btn">2d</button>
+        <button id="view5d" class="view-btn">5d</button>
+        <button id="viewAll" class="view-btn">All</button>
+      </div>
+    </div>
   </div>
 
   <!-- 🔹 Fullscreen Plotly Chart -->

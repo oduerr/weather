@@ -15,21 +15,35 @@
       overflow-x: hidden;
     }
 
-    /* 🔹 Mobile-Friendly Controls */
+    /* 🔹 Mobile-Friendly Controls with Fade */
     #controls {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       padding: 10px;
-      border-radius: 0 0 10px 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      border-radius: 0 0 15px 15px;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
       z-index: 100;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
+      transition: all 0.3s ease;
+      transform: translateY(0);
+    }
+
+    #controls.fade-out {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    #controls.fade-in {
+      transform: translateY(0);
+      opacity: 1;
     }
 
     select,
@@ -50,8 +64,25 @@
     /* 🔹 Mobile Plot Container */
     #plot {
       width: 100vw;
-      height: calc(100vh - 80px); /* Account for controls */
-      margin-top: 80px; /* Space for controls */
+      height: 100vh; /* Full height when controls fade */
+      margin-top: 0; /* No margin when controls fade */
+      transition: margin-top 0.3s ease;
+    }
+
+    #plot.with-controls {
+      height: calc(100vh - 80px);
+      margin-top: 80px;
+    }
+
+    /* Fade trigger area */
+    #fade-trigger {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      z-index: 99;
+      background: transparent;
     }
 
     /* Mobile-friendly view buttons */
@@ -130,7 +161,7 @@
 </head>
 
 <body>
-  <!-- 🔹 Mobile-Friendly Controls -->
+  <!-- 🔹 Mobile-Friendly Controls with Fade -->
   <div id="controls">
     <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%;">
       <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
@@ -165,6 +196,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Fade trigger area -->
+  <div id="fade-trigger"></div>
 
   <!-- 🔹 Fullscreen Plotly Chart -->
   <div id="plot"></div>

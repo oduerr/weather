@@ -306,3 +306,60 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+// Mobile fade controls functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const controls = document.getElementById('controls');
+  const plot = document.getElementById('plot');
+  const fadeTrigger = document.getElementById('fade-trigger');
+  let fadeTimeout;
+
+  // Function to show controls
+  function showControls() {
+    controls.classList.remove('fade-out');
+    controls.classList.add('fade-in');
+    plot.classList.add('with-controls');
+    clearTimeout(fadeTimeout);
+  }
+
+  // Function to hide controls
+  function hideControls() {
+    controls.classList.remove('fade-in');
+    controls.classList.add('fade-out');
+    plot.classList.remove('with-controls');
+  }
+
+  // Show controls on hover/touch of trigger area
+  fadeTrigger.addEventListener('mouseenter', showControls);
+  fadeTrigger.addEventListener('touchstart', showControls);
+
+  // Show controls when interacting with controls
+  controls.addEventListener('mouseenter', showControls);
+  controls.addEventListener('touchstart', showControls);
+
+  // Hide controls after delay when not interacting
+  function scheduleHide() {
+    fadeTimeout = setTimeout(hideControls, 3000); // 3 second delay
+  }
+
+  fadeTrigger.addEventListener('mouseleave', scheduleHide);
+  controls.addEventListener('mouseleave', scheduleHide);
+
+  // Show controls on any interaction with the page
+  document.addEventListener('click', showControls);
+  document.addEventListener('touchstart', showControls);
+
+  // Auto-hide controls after initial load
+  setTimeout(hideControls, 5000); // Hide after 5 seconds
+
+  // Show controls on scroll (mobile)
+  let lastScrollTop = 0;
+  window.addEventListener('scroll', function() {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    if (Math.abs(scrollTop - lastScrollTop) > 10) {
+      showControls();
+      scheduleHide();
+    }
+    lastScrollTop = scrollTop;
+  });
+});

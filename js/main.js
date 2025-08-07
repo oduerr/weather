@@ -10,12 +10,20 @@ let measured_water_temp = null;
 // import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
 
 // For now, we'll define the configuration inline to maintain file:// compatibility
-const PANELS = ['temperature'];
+const PANELS = ['temperature', 'uv_wind'];
 const PANEL_CONFIG = {
   temperature: {
     enabled: true,
     title: 'Temperature',
     description: 'Temperature forecast with ensemble data',
+    defaultView: '2d',
+    showEnsemble: true,
+    showCurrent: true
+  },
+  uv_wind: {
+    enabled: true,
+    title: 'UV Index & Wind',
+    description: 'UV index and wind information with ensemble data',
     defaultView: '2d',
     showEnsemble: true,
     showCurrent: true
@@ -32,6 +40,7 @@ const locations = [
   { name: "🌲🌲 Fischbach", lat: 48.157652, lon: 8.487578 },
 ];
 const models = [
+  { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },
   { id: "icon_d2_det", label: "🇩🇪 ICON D2 48h", model: "icon_d2", type: "deterministic" },
   { id: "icon_seamless_det", label: "🇩🇪 Seamless", model: "icon_seamless", type: "deterministic" },
   { id: "meteoswiss_icon_ch1", label: "🇨🇭 ICON CH1", model: "meteoswiss_icon_ch1", type: "deterministic" },
@@ -196,21 +205,25 @@ async function fetchAndPlot() {
   try {
     const data = await window.WeatherAPI.getWeatherDataWithFallback(selectedLoc, selectedModel);
     
-    // Loop over enabled panels and render each one
-    PANELS.forEach(panelName => {
-      const panelConfig = PANEL_CONFIG[panelName];
-      if (panelConfig && panelConfig.enabled) {
-        console.log(`Rendering panel: ${panelName}`);
-        
-        // Use the visualizer registry to render the panel
-        if (window.VisRegistry && window.VisRegistry.renderPanel) {
-          window.VisRegistry.renderPanel(panelName, data, selectedLoc, selectedModel, panelConfig);
-        } else {
-          // Fallback to direct rendering if registry is not available
-          processWeatherData(data, selectedLoc, selectedModel);
-        }
+    // Get the selected panel from the dropdown
+    const panelSelect = document.getElementById('panelSelect');
+    const selectedPanel = panelSelect ? panelSelect.value : 'temperature';
+    
+    // Render only the selected panel
+    const panelConfig = PANEL_CONFIG[selectedPanel];
+    if (panelConfig && panelConfig.enabled) {
+      console.log(`Rendering panel: ${selectedPanel}`);
+      
+      // Use the visualizer registry to render the panel
+      if (window.VisRegistry && window.VisRegistry.renderPanel) {
+        window.VisRegistry.renderPanel(selectedPanel, data, selectedLoc, selectedModel, panelConfig);
+      } else {
+        // Fallback to direct rendering if registry is not available
+        processWeatherData(data, selectedLoc, selectedModel);
       }
-    });
+    } else {
+      console.error(`Panel '${selectedPanel}' not found or not enabled`);
+    }
     
     statusElement.textContent = `Data updated at ${new Date().toLocaleTimeString()}`;
   } catch (err) {
@@ -233,9 +246,10 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(() => {
     fetchAndPlot();
     
-    // Re-plot when location or model changes
+    // Re-plot when location, model, or panel changes
     document.getElementById("locationSelect").addEventListener("change", fetchAndPlot);
     document.getElementById("modelSelect").addEventListener("change", fetchAndPlot);
+    document.getElementById("panelSelect").addEventListener("change", fetchAndPlot);
   }, 100);
 });
 

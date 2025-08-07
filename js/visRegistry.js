@@ -29,6 +29,27 @@ window.VisRegistry = {
         window.WeatherPlot.adjustViewRange(parseInt(config.defaultView));
       }, 100);
     }
+  },
+  
+  /**
+   * UV Index and Wind panel visualizer
+   * Renders UV index and wind charts with ensemble data
+   */
+  uv_wind: function(data, location, model, config = {}) {
+    if (!window.WeatherPlot || !window.WeatherPlot.renderUVWindData) {
+      console.error('WeatherPlot UV/Wind renderer not available');
+      return;
+    }
+    
+    // Use the UV/wind rendering logic
+    window.WeatherPlot.renderUVWindData(data, location, model);
+    
+    // Apply panel-specific configuration
+    if (config.defaultView) {
+      setTimeout(() => {
+        window.WeatherPlot.adjustViewRange(parseInt(config.defaultView));
+      }, 100);
+    }
   }
 };
 

@@ -24,7 +24,8 @@ def fetch_weather_data_to_json(latitude=47.6952, longitude=9.1307, model="icon_d
             "temperature_2m", "relative_humidity_2m", "dew_point_2m",
             "precipitation", "precipitation_probability", "weather_code",
             "cloud_cover", "cloud_cover_low", "cloud_cover_mid",
-            "cloud_cover_high", "visibility", "sunshine_duration"
+            "cloud_cover_high", "visibility", "sunshine_duration",
+            "uv_index", "uv_index_clear_sky", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
         ],
         "daily": ["sunrise", "sunset"],
         "timezone": "Europe/Berlin",
@@ -85,7 +86,8 @@ def fetch_ensemble_data_to_json(latitude=47.6952, longitude=9.1307, model="icon_
         "longitude": longitude,
         "hourly": [
             "temperature_2m", "relative_humidity_2m",
-            "precipitation", "cloud_cover", "weather_code"
+            "precipitation", "cloud_cover", "weather_code",
+            "uv_index", "uv_index_clear_sky", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
         ],
         "timezone": "Europe/Berlin",
         "models": model

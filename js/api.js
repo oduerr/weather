@@ -57,7 +57,8 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
   if (model.type === "ensemble") {
     hourlyVars = [
       "temperature_2m", "relative_humidity_2m",
-      "precipitation", "cloud_cover", "weather_code"
+      "precipitation", "cloud_cover", "weather_code",
+      "uv_index", "uv_index_clear_sky", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
     ];
     apiUrl = `https://ensemble-api.open-meteo.com/v1/ensemble?`;
   } else {
@@ -65,7 +66,8 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
       "temperature_2m", "relative_humidity_2m", "dew_point_2m",
       "precipitation", "precipitation_probability", "weather_code",
       "cloud_cover", "cloud_cover_low", "cloud_cover_mid",
-      "cloud_cover_high", "visibility", "sunshine_duration"
+      "cloud_cover_high", "visibility", "sunshine_duration",
+      "uv_index", "uv_index_clear_sky", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
     ];
     apiUrl = `https://api.open-meteo.com/v1/forecast?`;
   }

@@ -343,3 +343,212 @@ window.WeatherPlot.adjustViewRange = function(days) {
     'xaxis.range': [viewStartISO, viewEndISO]
   });
 };
+
+/**
+ * Render UV index and wind data as a Plotly chart
+ * @param {Object} data - Weather data object
+ * @param {Object} location - Location object with lat, lon, name
+ * @param {Object} model - Model object with id, type, label
+ */
+window.WeatherPlot.renderUVWindData = function(data, location, model) {
+  // Extract hourly data
+  const hourly = data.hourly;
+  const timesLocal = hourly.time;
+
+  // Simple range - use all data
+  const startTime = timesLocal[0];
+  const endTime = timesLocal[timesLocal.length - 1];
+  console.log(`UV/Wind data range from ${startTime} to ${endTime}`);
+
+  // Store the data range for use by view buttons
+  document.getElementById('plot').setAttribute('data-start-time', startTime);
+  document.getElementById('plot').setAttribute('data-end-time', endTime);
+
+  // Extract UV and wind data
+  const uvIndex = hourly.uv_index || [];
+  const uvIndexClearSky = hourly.uv_index_clear_sky || [];
+  const windSpeed = hourly.wind_speed_10m || [];
+  const windDirection = hourly.wind_direction_10m || [];
+  const windGusts = hourly.wind_gusts_10m || [];
+
+  // Make Date Objects for all sunrises and sunsets
+  const sunrises = (data.daily && data.daily.sunrise || []).map(sunrise => new Date(sunrise));
+  const sunsets = (data.daily && data.daily.sunset || []).map(sunset => new Date(sunset));
+
+  // Build traces for UV and Wind data
+  // Row 1: UV Index
+  const traceUV = { 
+    x: timesLocal, 
+    y: uvIndex, 
+    mode: 'lines+markers', 
+    name: 'UV Index', 
+    line: { color: 'purple', width: 3 }, 
+    marker: { size: 6 },
+    yaxis: "y1" 
+  };
+  
+  const traceUVClearSky = { 
+    x: timesLocal, 
+    y: uvIndexClearSky, 
+    mode: 'lines', 
+    name: 'UV Index (Clear Sky)', 
+    line: { color: 'orange', width: 2, dash: 'dash' }, 
+    yaxis: "y1" 
+  };
+
+  // Row 2: Wind Speed and Gusts
+  const traceWindSpeed = { 
+    x: timesLocal, 
+    y: windSpeed, 
+    mode: 'lines', 
+    name: 'Wind Speed (km/h)', 
+    line: { color: 'blue', width: 2 }, 
+    yaxis: "y2" 
+  };
+  
+  const traceWindGusts = { 
+    x: timesLocal, 
+    y: windGusts, 
+    mode: 'lines', 
+    name: 'Wind Gusts (km/h)', 
+    line: { color: 'red', width: 2, dash: 'dash' }, 
+    yaxis: "y2" 
+  };
+
+  // Row 3: Wind Direction (as arrows or line)
+  const traceWindDirection = { 
+    x: timesLocal, 
+    y: windDirection, 
+    mode: 'lines+markers', 
+    name: 'Wind Direction (°)', 
+    line: { color: 'green', width: 2 }, 
+    marker: { size: 4 },
+    yaxis: "y3" 
+  };
+
+  // Ensemble traces for UV and Wind
+  let traceUVEnsemble = [];
+  let traceUVClearSkyEnsemble = [];
+  let traceWindSpeedEnsemble = [];
+  let traceWindGustsEnsemble = [];
+  let traceWindDirectionEnsemble = [];
+
+  if (model.type === "ensemble") {
+    traceUVEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "uv_index", "y1", "purple");
+    traceUVClearSkyEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "uv_index_clear_sky", "y1", "orange");
+    traceWindSpeedEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_speed_10m", "y2", "blue");
+    traceWindGustsEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_gusts_10m", "y2", "red");
+    traceWindDirectionEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_direction_10m", "y3", "green");
+  }
+
+  // Night shading: create rectangles for each night period
+  const nightShading = [];
+  if (sunrises.length > 0 && sunsets.length > 0) {
+    for (let i = 0; i < sunrises.length - 1; i++) {
+      nightShading.push({
+        type: "rect",
+        xref: "x",
+        yref: "paper",
+        x0: sunsets[i],
+        x1: sunrises[i + 1],
+        y0: 0, y1: 1,
+        fillcolor: "rgba(0, 0, 0, 0.08)",
+        layer: "below",
+        line: { width: 0 }
+      });
+    }
+  }
+
+  // "Now" vertical line
+  const now_local_iso = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+  const shapeNow = {
+    type: 'line',
+    x0: now_local_iso,
+    x1: now_local_iso,
+    y0: 0,
+    y1: 1,
+    xref: 'x',
+    yref: 'paper',
+    line: { color: 'red', dash: 'dash', width: 2 }
+  };
+
+  // Build all traces
+  let allTraces;
+  if (model.type === "ensemble") {
+    // For ensemble models, show ensemble traces (which include the mean)
+    allTraces = [
+      ...traceUVEnsemble, ...traceUVClearSkyEnsemble, ...traceWindSpeedEnsemble, ...traceWindGustsEnsemble, ...traceWindDirectionEnsemble,
+    ];
+  } else {
+    // For deterministic models, show individual traces
+    allTraces = [
+      traceUV, traceUVClearSky, traceWindSpeed, traceWindGusts, traceWindDirection
+    ];
+  }
+
+  // Find unique days for weekday annotations
+  const uniqueDays = [...new Set(timesLocal.map(t => t.split("T")[0]))];
+  const weekdayAnnotations = uniqueDays.map(day => {
+    const noonTime = new Date(`${day}T12:00:00`);
+    return {
+      x: noonTime.toISOString(),
+      y: 1.05,
+      xref: "x",
+      yref: "paper",
+      text: noonTime.toLocaleDateString("en-US", { weekday: "long" }),
+      showarrow: false,
+      font: { size: 14, color: "black", weight: "bold" },
+      align: "center"
+    };
+  });
+
+  // Build layout for UV/Wind panel
+  const layout = {
+    title: {
+      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${data.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`,
+      x: 0.05,
+      y: -0.05,
+      xanchor: "left",
+      font: { size: 12 },
+      showlegend: false,
+      margin: { l: 40, r: 20, t: 20, b: 10 },
+    },
+    showtitle: true,
+    width: window.innerWidth,
+    height: window.innerHeight * 0.98,
+    grid: { rows: 3, columns: 1, pattern: "independent" },
+
+    // X-axis settings
+    xaxis: { 
+      title: "Time (CET/CEST)", 
+      tickformat: "%b %d %H:%M", 
+      tickmode: "auto", 
+      showgrid: true, 
+      tickangle: -30, 
+      rangeslider: { visible: false }, 
+      anchor: "y3",
+      range: [startTime, endTime]
+    },
+
+    yaxis1: { title: "UV Index", domain: [0.70, 1], color: "purple", range: [0, 12] },
+    yaxis2: { title: "Wind Speed (km/h)", domain: [0.35, 0.70], color: "blue" },
+    yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], color: "green", range: [0, 360] },
+
+    shapes: [...nightShading, shapeNow],
+    showlegend: true,
+    legend: { x: 0.02, y: 0.98 },
+    annotations: weekdayAnnotations
+  };
+
+  Plotly.newPlot('plot', allTraces, layout).then(() => {
+    // Set initial view to show all data (no empty days)
+    const plotDiv = document.getElementById('plot');
+    const startTime = plotDiv.getAttribute('data-start-time');
+    const endTime = plotDiv.getAttribute('data-end-time');
+    
+    // Set the initial view to exactly match the data range
+    Plotly.relayout('plot', {
+      'xaxis.range': [startTime, endTime]
+    });
+  });
+};

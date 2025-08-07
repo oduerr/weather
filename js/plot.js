@@ -34,17 +34,22 @@ window.WeatherPlot.createContinuousEnsembleTraces = function(hourly, variable_na
   // Extract ensemble members dynamically
   const memberKeys = Object.keys(hourly).filter(key => key.startsWith(variable_name + "_member"));
   
-  memberKeys.forEach(key => {
-    traces.push({
-      x: hourly.time,
-      y: hourly[key],
-      mode: "lines",
-      name: key.replace("_", " "),
-      line: { color: color, width: 1 },
-      opacity: 0.2,
-      yaxis: yaxis
+  // Only show ensemble members if there are any
+  if (memberKeys.length > 0) {
+    // Add ensemble members with only the first one showing in legend
+    memberKeys.forEach((key, index) => {
+      traces.push({
+        x: hourly.time,
+        y: hourly[key],
+        mode: "lines",
+        name: index === 0 ? `Ensemble (${memberKeys.length} members)` : `Ensemble member ${index + 1}`,
+        line: { color: color, width: 1 },
+        opacity: 0.2,
+        yaxis: yaxis,
+        showlegend: index === 0 // Only show first member in legend
+      });
     });
-  });
+  }
   
   return traces;
 };
@@ -96,8 +101,15 @@ window.WeatherPlot.calculateEnsembleMode = function(hourly, variable_name) {
  * @param {Object} data - Weather data object
  * @param {Object} location - Location object with lat, lon, name
  * @param {Object} model - Model object with id, type, label
+ * @param {string} selectedPanel - Panel to render ('temperature' or 'uv_wind')
  */
-window.WeatherPlot.renderWeatherData = async function(data, location, model) {
+window.WeatherPlot.renderWeatherData = async function(data, location, model, selectedPanel = 'temperature') {
+  // Route to appropriate rendering function based on selected panel
+  if (selectedPanel === 'uv_wind') {
+    return window.WeatherPlot.renderUVWindData(data, location, model);
+  }
+  
+  // Default to temperature panel
   // Extract hourly data
   const hourly = data.hourly;
   const timesLocal = hourly.time; // No need to convert to local time since query is already in local time
@@ -513,6 +525,68 @@ window.WeatherPlot.renderUVWindData = function(data, location, model) {
     }
   }
 
+  // Beaufort scale boundaries for wind speed chart
+  const beaufortBoundaries = [
+    { force: 1, ms: 0.5, name: "B1" },
+    { force: 2, ms: 1.6, name: "B2" },
+    { force: 3, ms: 3.4, name: "B3" },
+    { force: 4, ms: 5.5, name: "B4" },
+    { force: 5, ms: 8.0, name: "B5" },
+    { force: 6, ms: 10.8, name: "B6" },
+    { force: 7, ms: 13.9, name: "B7" },
+    { force: 8, ms: 17.2, name: "B8" },
+    { force: 9, ms: 20.8, name: "B9" },
+    { force: 10, ms: 24.5, name: "B10" },
+    { force: 11, ms: 28.5, name: "B11" },
+    { force: 12, ms: 32.7, name: "B12" }
+  ];
+
+  // Calculate wind speed range for scaling
+  const windSpeedData = [...(hourly.wind_speed_10m || []), ...(hourly.wind_gusts_10m || [])];
+  const maxWindSpeed = Math.max(...windSpeedData, 0);
+  const minWindSpeed = Math.min(...windSpeedData, 0);
+  
+  // Only show Beaufort lines that fall within the data range
+  const beaufortShapes = beaufortBoundaries
+    .filter(boundary => boundary.ms * 3.6 <= maxWindSpeed * 1.2) // Only show if within 20% of max
+    .map(boundary => ({
+      type: 'line',
+      x0: startTime,
+      x1: endTime,
+      y0: boundary.ms * 3.6, // Convert m/s to km/h
+      y1: boundary.ms * 3.6,
+      xref: 'x',
+      yref: 'y2',
+      line: { 
+        color: boundary.force <= 3 ? 'green' : boundary.force <= 6 ? 'orange' : 'red',
+        width: 1,
+        dash: 'dot'
+      },
+      layer: 'below'
+    }));
+
+  // Create annotations for Beaufort boundaries (only for visible lines)
+  const beaufortAnnotations = beaufortBoundaries
+    .filter(boundary => boundary.ms * 3.6 <= maxWindSpeed * 1.2) // Only show if within 20% of max
+    .map(boundary => {
+      let text = boundary.name;
+      // Add surfer emoji for Beaufort 3, 4, and 5 (optimal surfing range)
+      if (boundary.force >= 3 && boundary.force <= 5) {
+        text = boundary.name + ' 🏄‍♂️';
+      }
+      return {
+        x: 0.98, // Use paper coordinates instead of data coordinates
+        y: boundary.ms * 3.6,
+        xref: 'paper',
+        yref: 'y2',
+        text: text,
+        showarrow: false,
+        font: { size: 10, color: boundary.force <= 3 ? 'green' : boundary.force <= 6 ? 'orange' : 'red' },
+        xanchor: 'left',
+        yanchor: 'middle'
+      };
+    });
+
   // "Now" vertical line
   const now_local_iso = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
   const shapeNow = {
@@ -565,7 +639,7 @@ window.WeatherPlot.renderUVWindData = function(data, location, model) {
       xanchor: "left",
       font: { size: 12 },
       showlegend: false,
-      margin: { l: 40, r: 20, t: 20, b: 10 },
+      margin: { l: 40, r: 60, t: 20, b: 10 }, // Increased right margin for annotations
     },
     showtitle: true,
     width: window.innerWidth,
@@ -585,13 +659,25 @@ window.WeatherPlot.renderUVWindData = function(data, location, model) {
     },
 
     yaxis1: { title: "UV Index", domain: [0.70, 1], color: "purple", range: [0, 12] },
-    yaxis2: { title: "Wind Speed (km/h)", domain: [0.35, 0.70], color: "blue" },
+    yaxis2: { 
+      title: "Wind Speed (km/h)", 
+      domain: [0.35, 0.70], 
+      color: "blue",
+      autorange: true, // Ensure auto-scaling based on data
+      rangemode: 'tozero' // Start from zero
+    },
     yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], color: "green", range: [0, 360] },
 
-    shapes: [...nightShading, shapeNow],
+    shapes: [...nightShading, ...beaufortShapes, shapeNow],
     showlegend: true,
-    legend: { x: 0.02, y: 0.98 },
-    annotations: weekdayAnnotations
+    legend: { 
+      x: 0.02, 
+      y: 0.98,
+      bgcolor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white background
+      bordercolor: 'rgba(0, 0, 0, 0.2)', // Semi-transparent border
+      borderwidth: 1
+    },
+    annotations: [...weekdayAnnotations, ...beaufortAnnotations]
   };
 
   Plotly.newPlot('plot', allTraces, layout).then(() => {

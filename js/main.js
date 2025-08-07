@@ -61,19 +61,7 @@ function getUrlParams() {
   return null;
 }
 
-function fetchKonstanzWeather(callback) {
-  fetch("https://www.uni-konstanz.de/hsp/wetter/data/current.json")
-      .then(response => response.json())
-      .then(data => {
-          const airTemp = data.temperature?.value || "N/A";
-          const waterTemp = data.temperature_water?.value || "N/A";
-          callback(airTemp, waterTemp);
-      })
-      .catch(error => {
-          console.error("Error fetching Konstanz weather:", error);
-          callback("N/A", "N/A");  // Fallback values
-  });
-}
+
 
 // ------------------------------
 // 2) Populate Dropdowns (Including URL-Based Location)
@@ -130,7 +118,7 @@ modSelect.selectedIndex = 0;
 // ------------------------------
 // 3) Fetch & Plot Function
 // ------------------------------
-function fetchAndPlot() {
+async function fetchAndPlot() {
 
 
   // // Declare selectedLoc so it can be reassigned
@@ -158,7 +146,7 @@ function fetchAndPlot() {
   }
 
   if (selectedLoc && selectedLoc.name === "Konstanz") {
-      fetchKonstanzWeather((airTemp, waterTemp) => {
+      window.WeatherAPI.fetchKonstanzWeather((airTemp, waterTemp) => {
           document.getElementById("konstanzTemperature").textContent = 
               "Current Temperature: " + airTemp + "°C";
       });
@@ -175,82 +163,25 @@ function fetchAndPlot() {
     console.log("✅ Selected Model:", selectedModel);
   }
 
-  // ✅ Unique cache key for each location + model
-  const CACHE_KEY = "weatherDataCache";
-  const CACHE_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
-  const cacheKey = `${selectedLoc.lat},${selectedLoc.lon},${selectedModel.id}`;
-  const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
-  
-  if (cachedData[cacheKey]) {
-    const cachedEntry = cachedData[cacheKey];
-
-    // ✅ Check if cache is still valid
-    if (Date.now() - cachedEntry.timestamp < CACHE_EXPIRATION_MS) {
-      console.log("✅ Using cached data for", selectedLoc.name);
-      processWeatherData(cachedEntry.data, selectedLoc, selectedModel);
-      statusElement.textContent = `Loaded from cache (${selectedLoc.name})`;
-      return;
-    }
-  }
-
-  // ✅ If no valid cache, fetch new data
+  // Use the new API module
   statusElement.textContent = "Fetching data...";
-
-  // Hourly & daily variables
-  let hourlyVars;
-  let apiUrl;
-  if (selectedModel.type === "ensemble") {
-    hourlyVars = [ //Not all variables are available for ensemble models
-      "temperature_2m", "relative_humidity_2m",
-      "precipitation", //"weather_code",
-      "cloud_cover"
-    ];
-    apiUrl = `https://ensemble-api.open-meteo.com/v1/ensemble?`;
-  } else {
-    hourlyVars = [
-      "temperature_2m", "relative_humidity_2m", "dew_point_2m",
-      "precipitation", "precipitation_probability", "weather_code",
-      "cloud_cover", "cloud_cover_low", "cloud_cover_mid",
-      "cloud_cover_high", "visibility", "sunshine_duration"
-    ];
-    apiUrl = `https://api.open-meteo.com/v1/forecast?`;
-  }
-
-  const dailyVars = ["sunrise", "sunset"];
-
-  // Build API URL
-  const params = new URLSearchParams({
-    latitude: selectedLoc.lat,
-    longitude: selectedLoc.lon,
-    hourly: hourlyVars.join(","),
-    "timezone": "Europe/Berlin",
-    models: selectedModel.model,
-  });
   
-  // Only add daily parameters for deterministic models
-  if (selectedModel.type !== "ensemble") {
-    params.append("daily", dailyVars.join(","));
+  // Check if API is available
+  console.log("WeatherAPI available:", !!window.WeatherAPI);
+  if (!window.WeatherAPI || !window.WeatherAPI.getWeatherDataWithFallback) {
+    console.error("WeatherAPI not available");
+    statusElement.textContent = "API not loaded";
+    return;
   }
-
-  // Fetch new data
-  fetch(apiUrl + params.toString())
-    .then(res => res.json())
-    .then(data => {
-      
-      // ✅ Store new data in cache
-      cachedData[cacheKey] = {
-        data: data,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cachedData));
-
-      processWeatherData(data, selectedLoc, selectedModel);
-      statusElement.textContent = `Data updated at ${new Date().toLocaleTimeString()}`;
-    })
-    .catch(err => {
-      console.error("Error fetching data:", err);
-      statusElement.textContent = "Error fetching data";
-    });
+  
+  try {
+    const data = await window.WeatherAPI.getWeatherDataWithFallback(selectedLoc, selectedModel);
+    processWeatherData(data, selectedLoc, selectedModel);
+    statusElement.textContent = `Data updated at ${new Date().toLocaleTimeString()}`;
+  } catch (err) {
+    console.error("Error fetching data:", err);
+    statusElement.textContent = "Error fetching data";
+  }
 }
 
 // Function to create continuous ensemble traces
@@ -491,12 +422,17 @@ function processWeatherData(data, selectedLoc, model) {
   Plotly.newPlot('plot', allTraces, layout);
 } // End of processWeatherData
 
-// Initialize the plot with default selections
-fetchAndPlot();
-
-// Re-plot when location or model changes
-document.getElementById("locationSelect").addEventListener("change", fetchAndPlot);
-document.getElementById("modelSelect").addEventListener("change", fetchAndPlot);
+// Initialize the plot with default selections after API is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Wait a bit to ensure API is loaded
+  setTimeout(() => {
+    fetchAndPlot();
+    
+    // Re-plot when location or model changes
+    document.getElementById("locationSelect").addEventListener("change", fetchAndPlot);
+    document.getElementById("modelSelect").addEventListener("change", fetchAndPlot);
+  }, 100);
+});
 
 // Add View Range Button Event Handlers
 document.getElementById("view2d").addEventListener("click", function() {

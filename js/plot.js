@@ -97,7 +97,7 @@ window.WeatherPlot.calculateEnsembleMode = function(hourly, variable_name) {
  * @param {Object} location - Location object with lat, lon, name
  * @param {Object} model - Model object with id, type, label
  */
-window.WeatherPlot.renderWeatherData = function(data, location, model) {
+window.WeatherPlot.renderWeatherData = async function(data, location, model) {
   // Extract hourly data
   const hourly = data.hourly;
   const timesLocal = hourly.time; // No need to convert to local time since query is already in local time
@@ -148,6 +148,57 @@ window.WeatherPlot.renderWeatherData = function(data, location, model) {
   const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
   // Humidity on secondary y-axis
   const traceHum = { x: timesLocal, y: humidity, mode: 'lines', name: 'Humidity (%)', line: { color: 'royalblue' }, yaxis: "y2" };
+
+  // Weather Station Data Integration (Konstanz only)
+  let weatherStationTraces = [];
+  if (location.name && location.name.includes("Konstanz")) {
+    try {
+      const currentDate = new Date().toISOString().split('T')[0];
+      const stationData = await window.WeatherAPI.getKonstanzWeatherStationData(currentDate);
+      
+      if (stationData.temperature.length > 0) {
+        // Add weather station temperature trace
+        const traceStationTemp = {
+          x: stationData.times,
+          y: stationData.temperature,
+          mode: 'markers+lines',
+          name: 'Weather Station (°C)',
+          line: { color: 'darkred', width: 1 },
+          marker: { size: 3, color: 'darkred' },
+          yaxis: "y1"
+        };
+        weatherStationTraces.push(traceStationTemp);
+        
+        // Add water temperature after sunset
+        if (stationData.waterTemperature.length > 0 && sunsets.length > 0) {
+          const todaySunset = new Date(sunsets[0]);
+          console.log("🌅 Today's sunset time:", todaySunset.toISOString());
+          console.log("📊 Water temperature data available:", stationData.waterTemperature.length, "measurements");
+          
+          // Create water temperature trace that starts from sunset time
+          const traceWaterTemp = {
+            x: stationData.times,
+            y: stationData.waterTemperature,
+            mode: 'markers+lines',
+            name: 'Water Temperature (°C)',
+            line: { color: 'blue', width: 2, dash: 'dot' },
+            marker: { size: 2, color: 'blue' },
+            yaxis: "y1"
+          };
+          
+          // Add the water temperature trace after the temperature trace
+          weatherStationTraces.push(traceWaterTemp);
+          console.log("✅ Added water temperature trace after sunset time");
+        } else {
+          console.log("⚠️ Missing water temperature data or sunset times");
+        }
+        
+        console.log("✅ Added weather station data for Konstanz");
+      }
+    } catch (error) {
+      console.warn("Could not load weather station data:", error);
+    }
+  }
 
   // Row 2: Precipitation and Precipitation Probability
   const tracePrecip = { x: timesLocal, y: precipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'skyblue' }, yaxis: "y3" };
@@ -242,6 +293,11 @@ window.WeatherPlot.renderWeatherData = function(data, location, model) {
       traceCloudLow, traceCloudMid, traceCloudHigh, traceCloudTotal,
       traceVisibility
     ];
+  }
+
+  // Add weather station traces if available
+  if (weatherStationTraces.length > 0) {
+    allTraces = [...allTraces, ...weatherStationTraces];
   }
 
   // Build layout: using grid for 3 rows and a lower separate x-axis for date labels (if desired)

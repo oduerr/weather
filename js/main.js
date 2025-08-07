@@ -219,7 +219,7 @@ async function fetchAndPlot() {
         window.VisRegistry.renderPanel(selectedPanel, data, selectedLoc, selectedModel, panelConfig);
       } else {
         // Fallback to direct rendering if registry is not available
-        processWeatherData(data, selectedLoc, selectedModel);
+        await processWeatherData(data, selectedLoc, selectedModel);
       }
     } else {
       console.error(`Panel '${selectedPanel}' not found or not enabled`);
@@ -235,9 +235,9 @@ async function fetchAndPlot() {
 // ------------------------------
 // 4) Process Data & Plot (Using Plotly.js)
 // ------------------------------
-function processWeatherData(data, selectedLoc, model) {
+async function processWeatherData(data, selectedLoc, model) {
   // Use the plot module to render the weather data
-  window.WeatherPlot.renderWeatherData(data, selectedLoc, model);
+  await window.WeatherPlot.renderWeatherData(data, selectedLoc, model);
 } // End of processWeatherData
 
 // Initialize the plot with default selections after API is loaded

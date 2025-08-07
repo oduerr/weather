@@ -189,6 +189,206 @@ window.WeatherAPI.getMockWeatherStationData = function(currentDate) {
 }
 
 /**
+ * Fetch current weather data from BrightSky API for Konstanz
+ * @param {string} currentDate - Current date in YYYY-MM-DD format
+ * @returns {Promise<Object>} Current weather observations
+ */
+window.WeatherAPI.fetchBrightSkyCurrentWeather = async function(currentDate) {
+  const url = 'https://api.brightsky.dev/current_weather';
+  const params = new URLSearchParams({
+    lat: '47.6952',
+    lon: '9.1307'
+  });
+
+  try {
+    const response = await fetch(`${url}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ Fetched BrightSky current weather:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching BrightSky weather data:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch historical weather data from BrightSky API for Konstanz
+ * @param {string} currentDate - Current date in YYYY-MM-DD format
+ * @returns {Promise<Object>} Historical weather observations
+ */
+window.WeatherAPI.fetchBrightSkyHistoricalWeather = async function(currentDate) {
+  // BrightSky historical endpoint
+  const url = 'https://api.brightsky.dev/weather';
+  const params = new URLSearchParams({
+    lat: '47.6952',
+    lon: '9.1307',
+    date: currentDate
+  });
+
+  try {
+    const response = await fetch(`${url}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ Fetched BrightSky historical weather:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching BrightSky historical weather data:", error);
+    return null;
+  }
+}
+
+/**
+ * Process BrightSky historical data for chart integration
+ * @param {Object} brightSkyData - Raw BrightSky historical API response
+ * @param {string} currentDate - Current date in YYYY-MM-DD format
+ * @returns {Object} Processed observation data
+ */
+window.WeatherAPI.processBrightSkyHistoricalData = function(brightSkyData, currentDate) {
+  if (!brightSkyData || !brightSkyData.weather || !Array.isArray(brightSkyData.weather)) {
+    console.log("⚠️ No historical weather data available");
+    return {
+      temperature: [],
+      humidity: [],
+      precipitation: [],
+      windSpeed: [],
+      windDirection: [],
+      windGustSpeed: [],
+      windGustDirection: [],
+      pressure: [],
+      times: []
+    };
+  }
+
+  const weatherObservations = brightSkyData.weather;
+  
+  // Compute "now" in Europe/Berlin
+  const nowBerlinStr = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" });
+  const nowBerlinIsoLike = nowBerlinStr.replace(" ", "T");
+  const nowBerlinDate = new Date(nowBerlinIsoLike);
+  const currentDateBerlin = nowBerlinIsoLike.split('T')[0];
+  const currentHourBerlin = nowBerlinDate.getHours();
+  
+  // Create hourly data from actual historical observations
+  const processedData = {
+    temperature: [],
+    humidity: [],
+    precipitation: [],
+    windSpeed: [],
+    windDirection: [],
+    windGustSpeed: [],
+    windGustDirection: [],
+    pressure: [],
+    times: []
+  };
+
+  // Helper to (optionally) convert; currently disabled to avoid over-scaling
+  const toKmh = (value) => {
+    if (value == null || isNaN(value)) return 0;
+    // Treat BrightSky historical wind as already km/h based on observed ~x3.6 inflation
+    return value;
+  };
+
+  // Process each historical observation
+  console.log("🔍 Processing", weatherObservations.length, "historical observations");
+  weatherObservations.forEach((observation, index) => {
+    const timestampUTC = new Date(observation.timestamp);
+    // Convert to Europe/Berlin local time string and date
+    const timeLocal = timestampUTC.toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+    const obsDateBerlin = timeLocal.split('T')[0];
+    const obsHourBerlin = new Date(timeLocal).getHours();
+    
+    // Only include observations from today (Berlin) up to current (Berlin) and not in the future
+    if (obsDateBerlin === currentDateBerlin && obsHourBerlin <= currentHourBerlin && new Date(timeLocal) <= nowBerlinDate) {
+      // Debug first few observations
+      if (index < 3) {
+        const windRaw = observation.wind_speed ?? observation.wind_speed_10;
+        const gustRaw = observation.wind_gust ?? observation.wind_gust_speed_10 ?? observation.wind_gust_speed;
+        console.log(`📊 Observation ${index + 1}:`, {
+          timeUTC: timestampUTC.toISOString(),
+          timeLocal,
+          temp: observation.temperature,
+          humidity: observation.relative_humidity,
+          wind_raw: windRaw,
+          wind_pass_through: toKmh(windRaw),
+          gust_raw: gustRaw,
+          gust_pass_through: toKmh(gustRaw),
+          rawObservation: observation
+        });
+      }
+      
+      processedData.temperature.push(observation.temperature);
+      processedData.humidity.push(observation.relative_humidity);
+      processedData.precipitation.push(observation.precipitation_10 || 0);
+      
+      // Handle wind speed - check for different possible field names
+      const windRaw = observation.wind_speed ?? observation.wind_speed_10 ?? 0;
+      const gustRaw = observation.wind_gust ?? observation.wind_gust_speed_10 ?? observation.wind_gust_speed ?? 0;
+      const windDir = observation.wind_direction ?? observation.wind_direction_10 ?? 0;
+      const windGustDir = observation.wind_gust_direction ?? observation.wind_gust_direction_10 ?? 0;
+      
+      // Pass-through (assume km/h)
+      processedData.windSpeed.push(toKmh(windRaw));
+      processedData.windDirection.push(windDir);
+      processedData.windGustSpeed.push(toKmh(gustRaw));
+      processedData.windGustDirection.push(windGustDir);
+      processedData.pressure.push(observation.pressure_msl);
+      processedData.times.push(timeLocal);
+    }
+  });
+
+  console.log("✅ Processed BrightSky historical data:", processedData.times.length, "actual observations");
+  return processedData;
+}
+
+/**
+ * Get BrightSky observation data for Konstanz
+ * @param {string} currentDate - Current date in YYYY-MM-DD format
+ * @returns {Promise<Object>} Processed BrightSky observation data
+ */
+window.WeatherAPI.getBrightSkyObservationData = async function(currentDate) {
+  // Use historical weather endpoint to get observed data for the entire day
+  const brightSkyData = await window.WeatherAPI.fetchBrightSkyHistoricalWeather(currentDate);
+  
+  if (!brightSkyData) {
+    console.log("⚠️ BrightSky API not available - no observed data will be shown");
+    return {
+      temperature: [],
+      humidity: [],
+      precipitation: [],
+      windSpeed: [],
+      windDirection: [],
+      windGustSpeed: [],
+      windGustDirection: [],
+      pressure: [],
+      times: []
+    };
+  }
+  
+  return window.WeatherAPI.processBrightSkyHistoricalData(brightSkyData, currentDate);
+}
+
+
+
+/**
  * Fetch current weather data from Konstanz University
  * @param {Function} callback - Callback function with (airTemp, waterTemp) parameters
  */

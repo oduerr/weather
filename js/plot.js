@@ -129,6 +129,10 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const humidity = hourly.relative_humidity_2m || [];
   const precipitation = hourly.precipitation || [];
   const precipProb = hourly.precipitation_probability || [];
+  
+  // Debug precipitation data
+  console.log("🌧️ Precipitation data:", precipitation);
+  console.log("🌧️ Precipitation probability:", precipProb);
   const cloudCover = hourly.cloud_cover || [];
   const cloudCoverLow = hourly.cloud_cover_low || [];
   const cloudCoverMid = hourly.cloud_cover_mid || [];
@@ -163,9 +167,15 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
 
   // Weather Station Data Integration (Konstanz only)
   let weatherStationTraces = [];
+  let brightSkyTraces = [];
+  
   if (location.name && location.name.includes("Konstanz")) {
     try {
-      const currentDate = new Date().toISOString().split('T')[0];
+      // Use Europe/Berlin local date for observations
+      const nowBerlin = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+      const currentDate = nowBerlin.split('T')[0];
+      
+      // Get weather station data
       const stationData = await window.WeatherAPI.getKonstanzWeatherStationData(currentDate);
       
       if (stationData.temperature.length > 0) {
@@ -198,20 +208,61 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
           
           // Add the water temperature trace after the temperature trace
           weatherStationTraces.push(traceWaterTemp);
-          console.log("✅ Added water temperature trace after sunset time");
-        } else {
-          console.log("⚠️ Missing water temperature data or sunset times");
         }
-        
-        console.log("✅ Added weather station data for Konstanz");
       }
+      
+      // Get BrightSky observation data
+      const brightSkyData = await window.WeatherAPI.getBrightSkyObservationData(currentDate);
+      
+      if (brightSkyData.temperature.length > 0) {
+        console.log("📊 BrightSky observation data available:", brightSkyData.temperature.length, "measurements");
+        
+        // Add BrightSky temperature trace (faint color)
+        const traceBrightSkyTemp = {
+          x: brightSkyData.times,
+          y: brightSkyData.temperature,
+          mode: 'markers+lines',
+          name: 'Observed Temperature (°C)',
+          line: { color: 'rgba(255, 0, 0, 0.3)', width: 2 },
+          marker: { size: 4, color: 'rgba(255, 0, 0, 0.4)' },
+          yaxis: "y1"
+        };
+        brightSkyTraces.push(traceBrightSkyTemp);
+        
+        // Add BrightSky humidity trace (faint color)
+        const traceBrightSkyHum = {
+          x: brightSkyData.times,
+          y: brightSkyData.humidity,
+          mode: 'markers+lines',
+          name: 'Observed Humidity (%)',
+          line: { color: 'rgba(0, 100, 255, 0.3)', width: 2 },
+          marker: { size: 4, color: 'rgba(0, 100, 255, 0.4)' },
+          yaxis: "y2"
+        };
+        brightSkyTraces.push(traceBrightSkyHum);
+        
+        // Add BrightSky precipitation trace (faint color)
+        const traceBrightSkyPrecip = {
+          x: brightSkyData.times,
+          y: brightSkyData.precipitation,
+          type: 'bar',
+          name: 'Observed Precipitation (mm)',
+          marker: { color: 'rgba(135, 206, 235, 0.3)' },
+          yaxis: "y3"
+        };
+        brightSkyTraces.push(traceBrightSkyPrecip);
+      }
+      
+      console.log("✅ Added BrightSky observation data for Konstanz");
     } catch (error) {
-      console.warn("Could not load weather station data:", error);
+      console.warn("Could not load weather station or BrightSky data:", error);
     }
   }
 
   // Row 2: Precipitation and Precipitation Probability
-  const tracePrecip = { x: timesLocal, y: precipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'skyblue' }, yaxis: "y3" };
+  // Ensure precipitation is never negative
+  const cleanPrecipitation = precipitation.map(p => Math.max(0, p));
+  const tracePrecip = { x: timesLocal, y: cleanPrecipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'skyblue' }, yaxis: "y3" };
   // Precipitation Probability and Sunshine Percentage on secondary y-axis
   const tracePrecipProb = { x: timesLocal, y: precipProb, mode: 'lines', name: 'Precipitation Prob (%)', line: { color: 'green' }, yaxis: "y4" };
   const traceSunshine = { x: timesLocal, y: sunshinePercentage, mode: 'lines', name: 'Sunshine (%)', line: { color: '#FFA500' }, yaxis: "y4" };
@@ -309,6 +360,11 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   if (weatherStationTraces.length > 0) {
     allTraces = [...allTraces, ...weatherStationTraces];
   }
+  
+  // Add BrightSky observation traces if available
+  if (brightSkyTraces.length > 0) {
+    allTraces = [...allTraces, ...brightSkyTraces];
+  }
 
   // Build layout: using grid for 3 rows and a lower separate x-axis for date labels (if desired)
   // Step 1: Find the unique days in the dataset
@@ -354,6 +410,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       tickangle: -30, 
       rangeslider: { visible: false }, 
       anchor: "y5",
+      // Use provided times as-is; they are already local strings for forecast
       range: [startTime, endTime]
     },
 
@@ -416,7 +473,7 @@ window.WeatherPlot.adjustViewRange = function(days) {
  * @param {Object} location - Location object with lat, lon, name
  * @param {Object} model - Model object with id, type, label
  */
-window.WeatherPlot.renderUVWindData = function(data, location, model) {
+window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   // Extract hourly data
   const hourly = data.hourly;
   const timesLocal = hourly.time;
@@ -612,6 +669,11 @@ window.WeatherPlot.renderUVWindData = function(data, location, model) {
     allTraces = [
       traceUV, traceUVClearSky, traceWindSpeed, traceWindGusts, traceWindDirection
     ];
+  }
+  
+  // Add BrightSky observation traces if available
+  if (brightSkyTraces.length > 0) {
+    allTraces = [...allTraces, ...brightSkyTraces];
   }
 
   // Find unique days for weekday annotations

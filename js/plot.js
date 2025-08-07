@@ -170,9 +170,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model) {
         weatherStationTraces.push(traceStationTemp);
         
         // Add water temperature after sunset
-        if (stationData.waterTemperature.length > 0 && sunsets.length > 0) {
-          const todaySunset = new Date(sunsets[0]);
-          console.log("🌅 Today's sunset time:", todaySunset.toISOString());
+        if (stationData.waterTemperature.length) {
           console.log("📊 Water temperature data available:", stationData.waterTemperature.length, "measurements");
           
           // Create water temperature trace that starts from sunset time

@@ -110,8 +110,12 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   }
   
   // Default to temperature panel
-  // Extract hourly data
-  const hourly = data.hourly;
+  // Extract forecast and observation data
+  const forecast = data.forecast;
+  const observations = data.observations;
+  
+  // Extract hourly data from forecast
+  const hourly = forecast.hourly;
   const timesLocal = hourly.time; // No need to convert to local time since query is already in local time
 
   // Simple range - use all data
@@ -154,8 +158,8 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const weatherIcons = weatherCode.map(code => weatherIconMap[code] || "");
 
   // Make Date Objects for all sunrises and sunsets
-  const sunrises = (data.daily && data.daily.sunrise || []).map(sunrise => new Date(sunrise));
-  const sunsets = (data.daily && data.daily.sunset || []).map(sunset => new Date(sunset));
+  const sunrises = (forecast.daily && forecast.daily.sunrise || []).map(sunrise => new Date(sunrise));
+  const sunsets = (forecast.daily && forecast.daily.sunset || []).map(sunset => new Date(sunset));
 
   // Build traces for 3 rows:
   // Row 1: Temperature, Dew Point, Humidity, and Weather Icons
@@ -167,95 +171,39 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
 
   // Weather Station Data Integration (Konstanz only)
   let weatherStationTraces = [];
-  let brightSkyTraces = [];
   
-  if (location.name && location.name.includes("Konstanz")) {
-    try {
-      // Use Europe/Berlin local date for observations
-      const nowBerlin = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
-      const currentDate = nowBerlin.split('T')[0];
+  if (observations && observations.weatherStation && observations.weatherStation.temperature.length > 0) {
+    const stationData = observations.weatherStation;
+    
+    // Add weather station temperature trace
+    const traceStationTemp = {
+      x: stationData.times,
+      y: stationData.temperature,
+      mode: 'markers+lines',
+      name: 'Weather Station (°C)',
+      line: { color: 'darkred', width: 1 },
+      marker: { size: 3, color: 'darkred' },
+      yaxis: "y1"
+    };
+    weatherStationTraces.push(traceStationTemp);
+    
+    // Add water if available
+    if (stationData.waterTemperature.length) {
+      console.log("📊 Water temperature data available:", stationData.waterTemperature.length, "measurements");
       
-      // Get weather station data
-      const stationData = await window.WeatherAPI.getKonstanzWeatherStationData(currentDate);
+      // Create water temperature trace that starts from sunset time
+      const traceWaterTemp = {
+        x: stationData.times,
+        y: stationData.waterTemperature,
+        mode: 'markers+lines',
+        name: 'Water Temperature (°C)',
+        line: { color: 'blue', width: 2, dash: 'dot' },
+        marker: { size: 2, color: 'blue' },
+        yaxis: "y1"
+      };
       
-      if (stationData.temperature.length > 0) {
-        // Add weather station temperature trace
-        const traceStationTemp = {
-          x: stationData.times,
-          y: stationData.temperature,
-          mode: 'markers+lines',
-          name: 'Weather Station (°C)',
-          line: { color: 'darkred', width: 1 },
-          marker: { size: 3, color: 'darkred' },
-          yaxis: "y1"
-        };
-        weatherStationTraces.push(traceStationTemp);
-        
-        // Add water if available
-        if (stationData.waterTemperature.length) {
-          console.log("📊 Water temperature data available:", stationData.waterTemperature.length, "measurements");
-          
-          // Create water temperature trace that starts from sunset time
-          const traceWaterTemp = {
-            x: stationData.times,
-            y: stationData.waterTemperature,
-            mode: 'markers+lines',
-            name: 'Water Temperature (°C)',
-            line: { color: 'blue', width: 2, dash: 'dot' },
-            marker: { size: 2, color: 'blue' },
-            yaxis: "y1"
-          };
-          
-          // Add the water temperature trace after the temperature trace
-          weatherStationTraces.push(traceWaterTemp);
-        }
-      }
-      
-      // Get BrightSky observation data
-      const brightSkyData = await window.WeatherAPI.getBrightSkyObservationData(currentDate);
-      
-      if (brightSkyData.temperature.length > 0) {
-        console.log("📊 BrightSky observation data available:", brightSkyData.temperature.length, "measurements");
-        
-        // Add BrightSky temperature trace (faint color)
-        const traceBrightSkyTemp = {
-          x: brightSkyData.times,
-          y: brightSkyData.temperature,
-          mode: 'markers+lines',
-          name: 'Observed Temperature (°C)',
-          line: { color: 'rgba(255, 0, 0, 0.3)', width: 2 },
-          marker: { size: 4, color: 'rgba(255, 0, 0, 0.4)' },
-          yaxis: "y1"
-        };
-        brightSkyTraces.push(traceBrightSkyTemp);
-        
-        // Add BrightSky humidity trace (faint color)
-        const traceBrightSkyHum = {
-          x: brightSkyData.times,
-          y: brightSkyData.humidity,
-          mode: 'markers+lines',
-          name: 'Observed Humidity (%)',
-          line: { color: 'rgba(0, 100, 255, 0.3)', width: 2 },
-          marker: { size: 4, color: 'rgba(0, 100, 255, 0.4)' },
-          yaxis: "y2"
-        };
-        brightSkyTraces.push(traceBrightSkyHum);
-        
-        // Add BrightSky precipitation trace (faint color)
-        const traceBrightSkyPrecip = {
-          x: brightSkyData.times,
-          y: brightSkyData.precipitation,
-          type: 'bar',
-          name: 'Observed Precipitation (mm)',
-          marker: { color: 'rgba(135, 206, 235, 0.3)' },
-          yaxis: "y3"
-        };
-        brightSkyTraces.push(traceBrightSkyPrecip);
-      }
-      
-      console.log("✅ Added BrightSky observation data for Konstanz");
-    } catch (error) {
-      console.warn("Could not load weather station or BrightSky data:", error);
+      // Add the water temperature trace after the temperature trace
+      weatherStationTraces.push(traceWaterTemp);
     }
   }
 
@@ -360,11 +308,6 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   if (weatherStationTraces.length > 0) {
     allTraces = [...allTraces, ...weatherStationTraces];
   }
-  
-  // Add BrightSky observation traces if available
-  if (brightSkyTraces.length > 0) {
-    allTraces = [...allTraces, ...brightSkyTraces];
-  }
 
   // Build layout: using grid for 3 rows and a lower separate x-axis for date labels (if desired)
   // Step 1: Find the unique days in the dataset
@@ -388,7 +331,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   // Step 3: Add the annotations to the layout
   const layout = {
     title: {
-      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${data.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`,
+      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`,
       x: 0.05, // Align title to the left
       y: -0.05, // Move title up slightly
       xanchor: "left",
@@ -474,8 +417,12 @@ window.WeatherPlot.adjustViewRange = function(days) {
  * @param {Object} model - Model object with id, type, label
  */
 window.WeatherPlot.renderUVWindData = async function(data, location, model) {
-  // Extract hourly data
-  const hourly = data.hourly;
+  // Extract forecast and observation data
+  const forecast = data.forecast;
+  const observations = data.observations;
+  
+  // Extract hourly data from forecast
+  const hourly = forecast.hourly;
   const timesLocal = hourly.time;
 
   // Simple range - use all data
@@ -494,9 +441,11 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   const windDirection = hourly.wind_direction_10m || [];
   const windGusts = hourly.wind_gusts_10m || [];
 
+
+
   // Make Date Objects for all sunrises and sunsets
-  const sunrises = (data.daily && data.daily.sunrise || []).map(sunrise => new Date(sunrise));
-  const sunsets = (data.daily && data.daily.sunset || []).map(sunset => new Date(sunset));
+  const sunrises = (forecast.daily && forecast.daily.sunrise || []).map(sunrise => new Date(sunrise));
+  const sunsets = (forecast.daily && forecast.daily.sunset || []).map(sunset => new Date(sunset));
 
   // Build traces for UV and Wind data
   // Row 1: UV Index
@@ -538,7 +487,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     yaxis: "y2" 
   };
 
-  // Row 3: Wind Direction (as arrows or line)
+  // Row 3: Wind Direction (numerical for now)
   const traceWindDirection = { 
     x: timesLocal, 
     y: windDirection, 
@@ -562,6 +511,55 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     traceWindSpeedEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_speed_10m", "y2", "blue");
     traceWindGustsEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_gusts_10m", "y2", "red");
     traceWindDirectionEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_direction_10m", "y3", "green");
+  }
+
+  // BrightSky observation data integration (Konstanz only)
+  let brightSkyTraces = [];
+  
+  if (observations && observations.brightSky && observations.brightSky.times && observations.brightSky.times.length > 0) {
+    const brightSkyData = observations.brightSky;
+    
+    console.log("📊 BrightSky wind data available for UV/Wind panel:", brightSkyData.windSpeed.length, "measurements");
+    console.log("📊 Wind speed values:", brightSkyData.windSpeed);
+    console.log("📊 Wind gust values:", brightSkyData.windGustSpeed);
+    
+    // Add BrightSky wind speed trace (faint color)
+    const traceBrightSkyWindSpeed = {
+      x: brightSkyData.times,
+      y: brightSkyData.windSpeed,
+      mode: 'markers+lines',
+      name: 'Observed Wind Speed (km/h)',
+      line: { color: 'rgba(0, 0, 255, 0.3)', width: 2 },
+      marker: { size: 4, color: 'rgba(0, 0, 255, 0.4)' },
+      yaxis: "y2"
+    };
+    brightSkyTraces.push(traceBrightSkyWindSpeed);
+    
+    // Add BrightSky wind gusts trace (faint color)
+    const traceBrightSkyWindGusts = {
+      x: brightSkyData.times,
+      y: brightSkyData.windGustSpeed,
+      mode: 'markers+lines',
+      name: 'Observed Wind Gusts (km/h)',
+      line: { color: 'rgba(255, 0, 0, 0.3)', width: 2, dash: 'dash' },
+      marker: { size: 4, color: 'rgba(255, 0, 0, 0.4)' },
+      yaxis: "y2"
+    };
+    brightSkyTraces.push(traceBrightSkyWindGusts);
+    
+    // Add BrightSky wind direction trace (faint color)
+    const traceBrightSkyWindDirection = {
+      x: brightSkyData.times,
+      y: brightSkyData.windDirection,
+      mode: 'markers+lines',
+      name: 'Observed Wind Direction (°)',
+      line: { color: 'rgba(0, 128, 0, 0.3)', width: 2 },
+      marker: { size: 4, color: 'rgba(0, 128, 0, 0.4)' },
+      yaxis: "y3"
+    };
+    brightSkyTraces.push(traceBrightSkyWindDirection);
+    
+    console.log("✅ Added BrightSky wind observation data for UV/Wind panel");
   }
 
   // Night shading: create rectangles for each night period
@@ -695,7 +693,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   // Build layout for UV/Wind panel
   const layout = {
     title: {
-      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${data.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`,
+      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`,
       x: 0.05,
       y: -0.05,
       xanchor: "left",
@@ -731,7 +729,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], color: "green", range: [0, 360] },
 
     shapes: [...nightShading, ...beaufortShapes, shapeNow],
-    showlegend: true,
+    showlegend: false, // remove legend for now
     legend: { 
       x: 0.02, 
       y: 0.98,

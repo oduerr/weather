@@ -407,12 +407,12 @@ window.WeatherAPI.fetchKonstanzWeather = function(callback) {
 }
 
 /**
- * Get weather data from Open-Meteo API with caching
+ * Get forecast data from Open-Meteo API with caching
  * @param {Object} location - Location object with lat, lon, name
  * @param {Object} model - Model object with id, type, model properties
- * @returns {Promise<Object>} Weather data object
+ * @returns {Promise<Object>} Forecast data object
  */
-window.WeatherAPI.getWeatherData = async function(location, model) {
+window.WeatherAPI.getForecastData = async function(location, model) {
   // Check cache first
   const cacheKey = `${location.lat},${location.lon},${model.id}`;
   const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
@@ -422,13 +422,13 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
     
     // Check if cache is still valid
     if (Date.now() - cachedEntry.timestamp < CACHE_EXPIRATION_MS) {
-      console.log("✅ Using cached data for", location.name);
+      console.log("✅ Using cached forecast data for", location.name);
       return cachedEntry.data;
     }
   }
 
   // If no valid cache, fetch new data
-  console.log("Fetching fresh data for", location.name);
+  console.log("Fetching fresh forecast data for", location.name);
   
   // Determine API endpoint and variables based on model type
   let hourlyVars, apiUrl;
@@ -478,6 +478,60 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cachedData));
     
     return data;
+  } catch (error) {
+    console.error("Error fetching forecast data:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get observation data for a location
+ * @param {Object} location - Location object with lat, lon, name
+ * @returns {Promise<Object>} Observation data object
+ */
+window.WeatherAPI.getObservationData = async function(location) {
+  if (location.name && location.name.includes("Konstanz")) {
+    const nowBerlin = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+    const currentDate = nowBerlin.split('T')[0];
+    
+    try {
+      const [stationData, brightSkyData] = await Promise.all([
+        window.WeatherAPI.getKonstanzWeatherStationData(currentDate),
+        window.WeatherAPI.getBrightSkyObservationData(currentDate)
+      ]);
+      
+      return {
+        weatherStation: stationData,
+        brightSky: brightSkyData
+      };
+    } catch (error) {
+      console.warn("Could not load observation data:", error);
+      return null;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Get weather data from Open-Meteo API with caching
+ * @param {Object} location - Location object with lat, lon, name
+ * @param {Object} model - Model object with id, type, model properties
+ * @returns {Promise<Object>} Weather data object with forecast and observations
+ */
+window.WeatherAPI.getWeatherData = async function(location, model) {
+  try {
+    // Get forecast and observation data in parallel
+    const [forecastData, observationData] = await Promise.all([
+      window.WeatherAPI.getForecastData(location, model),
+      window.WeatherAPI.getObservationData(location)
+    ]);
+    
+    // Return unified data structure
+    return {
+      forecast: forecastData,
+      observations: observationData
+    };
   } catch (error) {
     console.error("Error fetching weather data:", error);
     throw error;

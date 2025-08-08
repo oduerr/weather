@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "pwa-chrome",
+        "request": "launch",
+        "name": "Debug site (Chrome, Live Server)",
+        "url": "http://127.0.0.1:5500/index.html",
+        "webRoot": "${workspaceFolder}",
+        "sourceMaps": true,
+        "trace": false,
+        "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+      }
+    ]
+  }

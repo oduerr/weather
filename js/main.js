@@ -312,6 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const controls = document.getElementById('controls');
   const plot = document.getElementById('plot');
   const fadeTrigger = document.getElementById('fade-trigger');
+  const fadeButton = document.getElementById('fade-button');
   let fadeTimeout;
   let isControlsVisible = true;
   let lastInteractionTime = Date.now();
@@ -323,6 +324,11 @@ document.addEventListener('DOMContentLoaded', function() {
       controls.classList.add('fade-in');
       plot.classList.add('with-controls');
       isControlsVisible = true;
+      // Keep toggle button in sync
+      if (fadeButton) {
+        fadeButton.textContent = '👁️';
+        fadeButton.title = 'Hide Controls';
+      }
     }
     lastInteractionTime = Date.now();
     clearTimeout(fadeTimeout);
@@ -335,6 +341,11 @@ document.addEventListener('DOMContentLoaded', function() {
       controls.classList.add('fade-out');
       plot.classList.remove('with-controls');
       isControlsVisible = false;
+      // Keep toggle button in sync
+      if (fadeButton) {
+        fadeButton.textContent = '👁️‍🗨️';
+        fadeButton.title = 'Show Controls';
+      }
     }
   }
 
@@ -364,9 +375,15 @@ document.addEventListener('DOMContentLoaded', function() {
   fadeTrigger.addEventListener('mouseleave', scheduleHide);
   controls.addEventListener('mouseleave', scheduleHide);
 
-  // Show controls on any interaction with the page
-  document.addEventListener('click', showControls);
-  document.addEventListener('touchstart', showControls, { passive: true });
+  // Show controls on any interaction with the page, then schedule hide for mobile taps
+  document.addEventListener('click', function() {
+    showControls();
+    scheduleHide();
+  });
+  document.addEventListener('touchstart', function() {
+    showControls();
+    scheduleHide();
+  }, { passive: true });
 
   // Show controls on scroll (mobile) with debouncing
   let scrollTimeout;
@@ -421,17 +438,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Test function for fade button
   window.testFadeButton = function() {
-    const fadeButton = document.getElementById('fade-button');
-    if (fadeButton) {
+    const fadeButtonEl = document.getElementById('fade-button');
+    if (fadeButtonEl) {
       console.log('Testing fade button...');
-      fadeButton.click();
+      fadeButtonEl.click();
     } else {
       console.log('Fade button not found');
     }
   };
 
   // Fade button functionality
-  const fadeButton = document.getElementById('fade-button');
   if (fadeButton) {
     fadeButton.addEventListener('click', function(event) {
       // Prevent this click from triggering the page-wide show controls
@@ -441,14 +457,10 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (isControlsVisible) {
         hideControls();
-        fadeButton.textContent = '👁️‍🗨️'; // Show "eye with speech bubble" when hidden
-        fadeButton.title = 'Show Controls';
-        console.log('Controls hidden');
       } else {
         showControls();
-        fadeButton.textContent = '👁️'; // Show "eye" when visible
-        fadeButton.title = 'Hide Controls';
-        console.log('Controls shown');
+        // After showing via button, auto-hide after delay
+        scheduleHide();
       }
     });
     

@@ -449,6 +449,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Fade button functionality
   if (fadeButton) {
+    // Handle taps on mobile to avoid document-level touchstart toggling back
+    fadeButton.addEventListener('touchstart', function(event) {
+      // Ensure this does not bubble to document touchstart
+      event.stopPropagation();
+      // Prevent the subsequent synthetic click
+      event.preventDefault();
+
+      if (isControlsVisible) {
+        hideControls();
+      } else {
+        showControls();
+        scheduleHide();
+      }
+    }, { passive: false });
+
+    // Handle clicks (desktop and fallback)
     fadeButton.addEventListener('click', function(event) {
       // Prevent this click from triggering the page-wide show controls
       event.stopPropagation();
@@ -464,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
-    console.log('✅ Fade button event listener attached');
+    console.log('✅ Fade button event listeners attached');
   } else {
     console.log('⚠️ Fade button not found');
   }

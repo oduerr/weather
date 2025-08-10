@@ -500,9 +500,18 @@ window.WeatherAPI.getObservationData = async function(location) {
         window.WeatherAPI.getBrightSkyObservationData(currentDate)
       ]);
       
+      // Compute last observation time from BrightSky (if available)
+      let lastObsTime = null;
+      if (brightSkyData && Array.isArray(brightSkyData.times) && brightSkyData.times.length > 0) {
+        lastObsTime = brightSkyData.times[brightSkyData.times.length - 1];
+        // Attach to brightSky object for convenience
+        brightSkyData.lastObsTime = lastObsTime;
+      }
+      
       return {
         weatherStation: stationData,
-        brightSky: brightSkyData
+        brightSky: brightSkyData,
+        lastObsTime: lastObsTime
       };
     } catch (error) {
       console.warn("Could not load observation data:", error);

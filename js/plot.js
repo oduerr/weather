@@ -288,6 +288,35 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     line: { color: 'red', dash: 'dash', width: 2 }
   };
 
+  // Last observation time marker (if available)
+  const lastObsTime = observations && (observations.lastObsTime || (observations.brightSky && observations.brightSky.lastObsTime));
+  const lastObsShapes = [];
+  const lastObsAnnotations = [];
+  if (lastObsTime) {
+    lastObsShapes.push({
+      type: 'line',
+      x0: lastObsTime,
+      x1: lastObsTime,
+      y0: 0,
+      y1: 1,
+      xref: 'x',
+      yref: 'paper',
+      line: { color: 'gray', width: 1 }
+    });
+    lastObsAnnotations.push({
+      x: lastObsTime,
+      y: 1,
+      xref: 'x',
+      yref: 'paper',
+      text: 'last obs',
+      showarrow: true,
+      arrowhead: 2,
+      ax: 0,
+      ay: -20,
+      font: { size: 10, color: 'gray' }
+    });
+  }
+
   // Build all traces
   let allTraces;
   if (model.type === "ensemble") {
@@ -366,9 +395,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35] },  // 🔼 More space for bottom row
     yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", range: [0, 100], color: "darkred" },
 
-    shapes: [...nightShading, shapeNow],
+    shapes: [...nightShading, shapeNow, ...lastObsShapes],
     showlegend: false,  // Hide legend
-    annotations: weekdayAnnotations  // ✅ Add weekday labels at noon
+    annotations: [...weekdayAnnotations, ...lastObsAnnotations]  // ✅ Add weekday labels at noon + last obs
   }; // End of layout
 
   Plotly.newPlot('plot', allTraces, layout).then(() => {
@@ -655,6 +684,35 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     line: { color: 'red', dash: 'dash', width: 2 }
   };
 
+  // Last observation time marker (if available) for UV/Wind
+  const lastObsTimeUV = observations && (observations.lastObsTime || (observations.brightSky && observations.brightSky.lastObsTime));
+  const lastObsShapesUV = [];
+  const lastObsAnnotationsUV = [];
+  if (lastObsTimeUV) {
+    lastObsShapesUV.push({
+      type: 'line',
+      x0: lastObsTimeUV,
+      x1: lastObsTimeUV,
+      y0: 0,
+      y1: 1,
+      xref: 'x',
+      yref: 'paper',
+      line: { color: 'gray', width: 1 }
+    });
+    lastObsAnnotationsUV.push({
+      x: lastObsTimeUV,
+      y: 1,
+      xref: 'x',
+      yref: 'paper',
+      text: 'last obs',
+      showarrow: true,
+      arrowhead: 2,
+      ax: 0,
+      ay: -20,
+      font: { size: 10, color: 'gray' }
+    });
+  }
+
   // Build all traces
   let allTraces;
   if (model.type === "ensemble") {
@@ -728,7 +786,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     },
     yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], color: "green", range: [0, 360] },
 
-    shapes: [...nightShading, ...beaufortShapes, shapeNow],
+    shapes: [...nightShading, ...beaufortShapes, shapeNow, ...lastObsShapesUV],
     showlegend: false, // remove legend for now
     legend: { 
       x: 0.02, 
@@ -737,7 +795,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
       bordercolor: 'rgba(0, 0, 0, 0.2)', // Semi-transparent border
       borderwidth: 1
     },
-    annotations: [...weekdayAnnotations, ...beaufortAnnotations]
+    annotations: [...weekdayAnnotations, ...beaufortAnnotations, ...lastObsAnnotationsUV]
   };
 
   Plotly.newPlot('plot', allTraces, layout).then(() => {

@@ -288,3 +288,49 @@ The issue is now much clearer! You've completed the UI part (moving the fade but
 **Location**: Add button to the controls panel, next to existing time range controls. Name it "1d"
 **Behavior**: When clicked, adjusts the plot to show data for the current day (00:00-23:59) and up to 4am the next day.
 **User Benefit**: Quick access to detailed daily view without manually adjusting time ranges
+
+### Issue 2 
+Fade button is not working as expected, it not visible anymore.
+
+
+
+### Feature Request 2: Numerical Actuals (Observed vs Forecast)
+Purpose: Show key weather values as numbers (no graphs), comparing latest observed values from each source with the current forecast.
+Location: Add a third panel option named actuals (label: “📍 Actuals”) in the panelSelect.
+Scope (metrics):
+Air temperature (°C)
+Water temperature (°C, if available; typically station only)
+Wind speed (km/h), wind gust (km/h), wind direction (°)
+UV index
+Precipitation (last hour, mm; if available) and/or precipitation probability next hour (%)
+Cloud cover (%)
+Data sources:
+Observed A: Konstanz Weather Station (if selected location supports it)
+Observed B: BrightSky (latest historical observation)
+Forecast: Selected model’s current-hour forecast (Open‑Meteo)
+Data selection rules:
+Observed values: Use each source’s most recent sample within the last 6 hours. If none, show “N/A”.
+Forecast values: Use the value for the current local hour (Europe/Berlin). If between steps, use the nearest step.
+Show each observed source on its own row; do not merge sources.
+Layout:
+A compact grid/table:
+Columns: Metric | Observed (Station) | Observed (BrightSky) | Forecast (Model)
+Rows: One per metric listed in Scope.
+Show units inline (e.g., “12.3 °C”).
+Show per-row “as of” timestamps for observed sources (e.g., “last obs 13:20”); show model id/label for forecast.
+If a metric is not provided by a source, display “N/A”.
+Behavior:
+No Plotly chart in this panel; render simple DOM elements in #plot.
+Respect current selection (location + model).
+Update whenever a new fetch completes (same cadence as other panels).
+
+Accessibility/UX:
+Mobile-friendly, readable font, clear column headings.
+Use subtle color tags to distinguish Observed vs Forecast columns; avoid excessive styling.
+Acceptance criteria:
+Selecting “📍 Actuals” shows a numbers-only view with two observed rows (when available) and one forecast column.
+Values populate correctly from each source or show “N/A” when missing.
+Timestamps for observed data are visible and correct; model label is shown for forecast.
+No Plotly toolbar appears; the panel does not instantiate a chart.
+The previous FR2 was ambiguous; this version specifies a numbers-only “Actuals” panel, per-source observed rows, and a forecast column, with concrete data selection and layout.
+

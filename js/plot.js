@@ -440,6 +440,44 @@ window.WeatherPlot.adjustViewRange = function(days) {
 };
 
 /**
+ * Set view to a single day: today 00:00 to tomorrow 04:00 in Europe/Berlin, clamped to data range
+ */
+window.WeatherPlot.viewOneDay = function() {
+  const plotDiv = document.getElementById('plot');
+  if (!plotDiv) return;
+
+  const dataStart = new Date(plotDiv.getAttribute('data-start-time'));
+  const dataEnd = new Date(plotDiv.getAttribute('data-end-time'));
+
+  // Compute today at 00:00 and tomorrow at 04:00 in Europe/Berlin
+  const nowBerlinStr = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' });
+  const [datePart] = nowBerlinStr.split(' ');
+  const todayStartBerlin = new Date(`${datePart}T00:00:00`);
+
+  // Add 28 hours to get to 04:00 next day (24 + 4)
+  const tomorrow4Berlin = new Date(todayStartBerlin.getTime() + 28 * 60 * 60 * 1000);
+
+  // Clamp to data range
+  const viewStart = new Date(Math.max(dataStart.getTime(), todayStartBerlin.getTime()));
+  const viewEnd = new Date(Math.min(dataEnd.getTime(), tomorrow4Berlin.getTime()));
+
+  // If clamped range is invalid, fall back to showing the first day in data
+  if (!(viewEnd > viewStart)) {
+    const firstDayStart = new Date(dataStart);
+    firstDayStart.setHours(0,0,0,0);
+    const firstDayEnd = new Date(firstDayStart.getTime() + 28 * 60 * 60 * 1000);
+    Plotly.relayout('plot', {
+      'xaxis.range': [firstDayStart.toISOString().replace('Z',''), firstDayEnd.toISOString().replace('Z','')]
+    });
+    return;
+  }
+
+  Plotly.relayout('plot', {
+    'xaxis.range': [viewStart.toISOString().replace('Z',''), viewEnd.toISOString().replace('Z','')]
+  });
+};
+
+/**
  * Render UV index and wind data as a Plotly chart
  * @param {Object} data - Weather data object
  * @param {Object} location - Location object with lat, lon, name

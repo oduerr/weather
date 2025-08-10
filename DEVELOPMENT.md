@@ -259,8 +259,6 @@ deployment/
 - **Cross-browser**: Chrome, Firefox, Safari compatibility
 
 
-## Issues
-
 ### Issue 1 Remove automatic panel removal
 Issue: The controls panel automatically fades out after 3 seconds of inactivity, which can be disruptive to users who want to keep the controls visible.
 Current Behavior:
@@ -283,3 +281,10 @@ js/main.js - Remove automatic fade logic, keep only button toggle
 index.html - Fade button positioning and styling ✅ COMPLETED
 Status: Partially implemented - UI changes complete, logic cleanup needed
 The issue is now much clearer! You've completed the UI part (moving the fade button to a fixed position), but you still need to clean up the automatic fade logic in the JavaScript code to make it truly "manual only" as intended.
+
+
+### Feature Request 1: One Day View Button
+**Purpose**: Allow users to quickly switch to viewing a single day of weather data 
+**Location**: Add button to the controls panel, next to existing time range controls. Name it "1d"
+**Behavior**: When clicked, adjusts the plot to show data for the current day (00:00-23:59) and up to 4am the next day.
+**User Benefit**: Quick access to detailed daily view without manually adjusting time ranges

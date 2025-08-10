@@ -254,6 +254,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add View Range Button Event Handlers
+document.getElementById("view1d").addEventListener("click", function() {
+  if (window.WeatherPlot && typeof window.WeatherPlot.viewOneDay === 'function') {
+    window.WeatherPlot.viewOneDay();
+  }
+});
+
 document.getElementById("view2d").addEventListener("click", function() {
   window.WeatherPlot.adjustViewRange(2);
 });

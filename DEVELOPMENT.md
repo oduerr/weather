@@ -1,8 +1,8 @@
-# FogCast Weather Application - Development Documentation
+# Weather Application - Development Documentation
 
 ## 📋 Project Overview
 
-**FogCast** is a static web application for visualizing weather forecast data with ensemble support. The application fetches data from the Open-Meteo API and displays it using Plotly.js charts.
+**Weather** is a static web application for visualizing weather forecast data with ensemble support. The application fetches data from the Open-Meteo API and displays it using Plotly.js charts.
 
 ### 🎯 Key Features
 - **Multi-location support** (Konstanz, Zurich, Espoo)
@@ -204,10 +204,6 @@ python fetch_weather_data.py
 - **Models**: ICON D2, MeteoSwiss, GFS
 - **Variables**: Temperature, humidity, precipitation, weather codes, etc.
 
-### Konstanz University
-- **URL**: `https://www.uni-konstanz.de/hsp/wetter/data/current.json`
-- **Data**: Real-time air and water temperature
-
 ## 🚀 Deployment
 
 ### Static Hosting
@@ -262,16 +258,28 @@ deployment/
 - **Fallback Testing**: Offline mode verification
 - **Cross-browser**: Chrome, Firefox, Safari compatibility
 
----
 
-## 📞 Contact & Support
+## Issues
 
-For development questions or issues:
-- **Repository**: [GitHub Weather Project](https://github.com/oduerr/weather)
-- **Documentation**: This file and `README_weather_fetcher.md`
-- **Issues**: Use GitHub Issues for bug reports
-
----
-
-*Last Updated: December 2024*
-*Version: 2.0 (Post-Refactoring)*
+### Issue 1 Remove automatic panel removal
+Issue: The controls panel automatically fades out after 3 seconds of inactivity, which can be disruptive to users who want to keep the controls visible.
+Current Behavior:
+Controls automatically hide after 3 seconds of no interaction
+Multiple auto-hide triggers: mouse leave, scroll, window focus changes
+Complex timing logic that can be confusing
+Desired Behavior:
+Controls visibility should ONLY change when the fade button is explicitly clicked
+Remove all automatic hiding/showing logic
+Keep the fade button always accessible (fixed position, top-right)
+Simple toggle: visible ↔ hidden
+Implementation Notes:
+✅ Fade button moved to fixed position (top-right corner)
+✅ Button styling updated for better accessibility
+❌ Need to remove auto-hide logic from js/main.js
+❌ Simplify fade controls to only respond to button clicks
+❌ Remove event listeners for mouse leave, scroll, focus changes
+Files to Modify:
+js/main.js - Remove automatic fade logic, keep only button toggle
+index.html - Fade button positioning and styling ✅ COMPLETED
+Status: Partially implemented - UI changes complete, logic cleanup needed
+The issue is now much clearer! You've completed the UI part (moving the fade button to a fixed position), but you still need to clean up the automatic fade logic in the JavaScript code to make it truly "manual only" as intended.

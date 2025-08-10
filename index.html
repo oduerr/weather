@@ -50,33 +50,6 @@
       pointer-events: auto;
     }
 
-    /* 🔹 Fade toggle button (always accessible) */
-    #fade-button {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 110; /* Above controls */
-      padding: 8px 10px;
-      border-radius: 9999px;
-      border: 1px solid #ddd;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      font-size: 18px;
-      line-height: 1;
-      min-width: 44px;
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      cursor: pointer;
-    }
-
-    #fade-button:active {
-      transform: scale(0.98);
-    }
-
     select,
     #status {
       font-size: 14px;
@@ -147,11 +120,6 @@
       #controls {
         padding: 8px;
         gap: 6px;
-      }
-      
-      #fade-button {
-        top: 8px;
-        right: 8px;
       }
       
       select,
@@ -237,9 +205,6 @@
       </div>
     </div>
   </div>
-
-  <!-- 🔹 Always-visible toggle to show/hide the controls -->
-  <button id="fade-button" aria-label="Hide Controls" title="Hide Controls">👁️</button>
 
   <!-- Fade trigger area -->
   <div id="fade-trigger"></div>

@@ -10,7 +10,7 @@ let measured_water_temp = null;
 // import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
 
 // For now, we'll define the configuration inline to maintain file:// compatibility
-const PANELS = ['temperature', 'uv_wind'];
+const PANELS = ['temperature', 'uv_wind', 'actuals'];
 const PANEL_CONFIG = {
   temperature: {
     enabled: true,
@@ -27,6 +27,14 @@ const PANEL_CONFIG = {
     defaultView: '2d',
     showEnsemble: true,
     showCurrent: true
+  },
+  actuals: {
+    enabled: true,
+    title: 'Actuals',
+    description: 'Observed vs Forecast numeric values',
+    defaultView: '2d',
+    showEnsemble: false,
+    showCurrent: false
   }
 };
 
@@ -270,12 +278,14 @@ document.getElementById("view5d").addEventListener("click", function() {
 
 document.getElementById("viewAll").addEventListener("click", function() {
   const plotDiv = document.getElementById('plot');
-  const startTime = plotDiv.getAttribute('data-start-time');
-  const endTime = plotDiv.getAttribute('data-end-time');
-
-  Plotly.relayout('plot', {
-    'xaxis.range': [startTime, endTime]
-  });
+  // Only attempt to relayout if a Plotly chart is active
+  if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
+    const startTime = plotDiv.getAttribute('data-start-time');
+    const endTime = plotDiv.getAttribute('data-end-time');
+    Plotly.relayout('plot', {
+      'xaxis.range': [startTime, endTime]
+    });
+  }
 });
 
 // Set active style for view buttons
@@ -303,8 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Handle window resize for mobile
   window.addEventListener('resize', function() {
-    if (window.WeatherPlot && window.WeatherPlot.renderWeatherData) {
-      // Update plot dimensions
+    const plotDiv = document.getElementById('plot');
+    if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
+      // Update plot dimensions only when a Plotly chart is present
       Plotly.relayout('plot', {
         width: window.innerWidth,
         height: Math.max(window.innerHeight - 120, 400)

@@ -419,6 +419,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
  */
 window.WeatherPlot.adjustViewRange = function(days) {
   const plotDiv = document.getElementById('plot');
+  if (!plotDiv || !plotDiv.classList || !plotDiv.classList.contains('js-plotly-plot')) {
+    return; // No active Plotly chart (e.g., on Actuals panel)
+  }
   const startTime = new Date(plotDiv.getAttribute('data-start-time'));
   const endTime = new Date(plotDiv.getAttribute('data-end-time'));
 
@@ -444,7 +447,7 @@ window.WeatherPlot.adjustViewRange = function(days) {
  */
 window.WeatherPlot.viewOneDay = function() {
   const plotDiv = document.getElementById('plot');
-  if (!plotDiv) return;
+  if (!plotDiv || !plotDiv.classList || !plotDiv.classList.contains('js-plotly-plot')) return;
 
   const dataStart = new Date(plotDiv.getAttribute('data-start-time'));
   const dataEnd = new Date(plotDiv.getAttribute('data-end-time'));

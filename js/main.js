@@ -248,6 +248,91 @@ async function processWeatherData(data, selectedLoc, model, selectedPanel = 'tem
   await window.WeatherPlot.renderWeatherData(data, selectedLoc, model, selectedPanel);
 } // End of processWeatherData
 
+// ------------------------------
+// Viewport Preserver (Feature 3)
+// ------------------------------
+window.ViewportPreserver = {
+  pending: null,
+  lastAppliedAt: 0,
+  capture() {
+    try {
+      const plotDiv = document.getElementById('plot');
+      if (!plotDiv || !plotDiv.classList || !plotDiv.classList.contains('js-plotly-plot')) {
+        this.pending = null;
+        return;
+      }
+      const layout = plotDiv.layout || plotDiv._fullLayout || {};
+      const xRange = (layout.xaxis && Array.isArray(layout.xaxis.range)) ? [layout.xaxis.range[0], layout.xaxis.range[1]] : null;
+      const yRanges = {};
+      Object.keys(layout).forEach(key => {
+        if (key.startsWith('yaxis') && layout[key] && Array.isArray(layout[key].range)) {
+          yRanges[key] = [layout[key].range[0], layout[key].range[1]];
+        }
+      });
+      this.pending = { xRange, yRanges };
+    } catch (e) {
+      console.warn('ViewportPreserver.capture failed', e);
+      this.pending = null;
+    }
+  },
+  hasPending() {
+    return !!(this.pending && this.pending.xRange);
+  },
+  wasJustApplied(windowMs = 1000) {
+    return Date.now() - this.lastAppliedAt < windowMs;
+  },
+  applyIfPending() {
+    const saved = this.pending;
+    if (!saved || !saved.xRange) { this.pending = null; return; }
+    try {
+      const plotDiv = document.getElementById('plot');
+      if (!plotDiv) { this.pending = null; return; }
+      const ds = plotDiv.getAttribute('data-start-time');
+      const de = plotDiv.getAttribute('data-end-time');
+      if (!ds || !de) { this.pending = null; return; }
+      const domainStart = new Date(ds);
+      const domainEnd = new Date(de);
+      const oldStart = new Date(saved.xRange[0]);
+      const oldEnd = new Date(saved.xRange[1]);
+      if (isNaN(oldStart) || isNaN(oldEnd) || isNaN(domainStart) || isNaN(domainEnd)) { this.pending = null; return; }
+      const width = oldEnd - oldStart;
+      const domainWidth = domainEnd - domainStart;
+      let newStart = oldStart;
+      let newEnd = oldEnd;
+      if (width >= domainWidth || width <= 0) {
+        newStart = domainStart;
+        newEnd = domainEnd;
+      } else {
+        if (oldStart < domainStart) {
+          newStart = domainStart;
+          newEnd = new Date(newStart.getTime() + width);
+          if (newEnd > domainEnd) { newStart = new Date(domainEnd.getTime() - width); newEnd = domainEnd; }
+        } else if (oldEnd > domainEnd) {
+          newEnd = domainEnd;
+          newStart = new Date(newEnd.getTime() - width);
+          if (newStart < domainStart) { newStart = domainStart; newEnd = new Date(domainStart.getTime() + width); }
+        }
+      }
+      const fmt = d => d.toISOString().replace('Z','');
+      const update = { 'xaxis.range': [fmt(newStart), fmt(newEnd)] };
+      if (saved.yRanges) {
+        Object.keys(saved.yRanges).forEach(axisKey => {
+          const yr = saved.yRanges[axisKey];
+          if (Array.isArray(yr) && yr.length === 2) {
+            update[`${axisKey}.range`] = [yr[0], yr[1]];
+          }
+        });
+      }
+      Plotly.relayout('plot', update);
+      this.lastAppliedAt = Date.now();
+    } catch (e) {
+      console.warn('ViewportPreserver.applyIfPending failed', e);
+    } finally {
+      this.pending = null;
+    }
+  }
+};
+
 // Initialize the plot with default selections after API is loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Wait a bit to ensure API is loaded
@@ -256,7 +341,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Re-plot when location, model, or panel changes
     document.getElementById("locationSelect").addEventListener("change", fetchAndPlot);
-    document.getElementById("modelSelect").addEventListener("change", fetchAndPlot);
+    document.getElementById("modelSelect").addEventListener("change", function() {
+      if (window.ViewportPreserver && typeof window.ViewportPreserver.capture === 'function') {
+        window.ViewportPreserver.capture();
+      }
+      fetchAndPlot();
+    });
     document.getElementById("panelSelect").addEventListener("change", fetchAndPlot);
   }, 100);
 });

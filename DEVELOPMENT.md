@@ -334,3 +334,18 @@ Timestamps for observed data are visible and correct; model label is shown for f
 No Plotly toolbar appears; the panel does not instantiate a chart.
 The previous FR2 was ambiguous; this version specifies a numbers-only “Actuals” panel, per-source observed rows, and a forecast column, with concrete data selection and layout.
 
+
+### Feature Request 3: Preserve Zoom Level When Switching Models
+
+Purpose:
+Keep the current zoom/pan level in the Plotly charts when switching between different weather models, instead of resetting.
+
+Current Behavior:
+	•	When a user zooms or pans to a specific time range and then switches the weather model, the chart resets .
+	•	This forces the user to manually re-zoom after each model change.
+
+Desired Behavior:
+	•	Store the current Plotly x-axis and y-axis ranges before switching models.
+	•	After the new model data is loaded and plotted, reapply the stored ranges.
+	•	If the stored range is partially outside the new data’s domain, clamp to the available range while keeping the zoom scale consistent.
+  * Still keep the current behavior where the zoom is resetted when switching to different days via the buttons.

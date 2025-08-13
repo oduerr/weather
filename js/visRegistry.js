@@ -23,10 +23,14 @@ window.VisRegistry = {
     // Use the existing temperature rendering logic
     window.WeatherPlot.renderWeatherData(data, location, model);
     
-    // Apply panel-specific configuration
+    // Apply panel-specific configuration, but don't override a pending/restored viewport
     if (config.defaultView) {
       setTimeout(() => {
-        window.WeatherPlot.adjustViewRange(parseInt(config.defaultView));
+        const vp = window.ViewportPreserver;
+        const shouldApplyDefault = !vp || (!vp.hasPending() && !vp.wasJustApplied());
+        if (shouldApplyDefault) {
+          window.WeatherPlot.adjustViewRange(parseInt(config.defaultView));
+        }
       }, 100);
     }
   },
@@ -44,10 +48,14 @@ window.VisRegistry = {
     // Use the UV/wind rendering logic
     window.WeatherPlot.renderUVWindData(data, location, model);
     
-    // Apply panel-specific configuration
+    // Apply panel-specific configuration, but don't override a pending/restored viewport
     if (config.defaultView) {
       setTimeout(() => {
-        window.WeatherPlot.adjustViewRange(parseInt(config.defaultView));
+        const vp = window.ViewportPreserver;
+        const shouldApplyDefault = !vp || (!vp.hasPending() && !vp.wasJustApplied());
+        if (shouldApplyDefault) {
+          window.WeatherPlot.adjustViewRange(parseInt(config.defaultView));
+        }
       }, 100);
     }
   },

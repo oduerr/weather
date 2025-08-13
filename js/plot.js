@@ -401,15 +401,16 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   }; // End of layout
 
   Plotly.newPlot('plot', allTraces, layout).then(() => {
-    // Set initial view to show all data (no empty days)
     const plotDiv = document.getElementById('plot');
     const startTime = plotDiv.getAttribute('data-start-time');
     const endTime = plotDiv.getAttribute('data-end-time');
-    
-    // Set the initial view to exactly match the data range
-    Plotly.relayout('plot', {
-      'xaxis.range': [startTime, endTime]
-    });
+    if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
+      window.ViewportPreserver.applyIfPending();
+    } else {
+      Plotly.relayout('plot', {
+        'xaxis.range': [startTime, endTime]
+      });
+    }
   });
 };
 
@@ -840,14 +841,15 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   };
 
   Plotly.newPlot('plot', allTraces, layout).then(() => {
-    // Set initial view to show all data (no empty days)
     const plotDiv = document.getElementById('plot');
     const startTime = plotDiv.getAttribute('data-start-time');
     const endTime = plotDiv.getAttribute('data-end-time');
-    
-    // Set the initial view to exactly match the data range
-    Plotly.relayout('plot', {
-      'xaxis.range': [startTime, endTime]
-    });
+    if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
+      window.ViewportPreserver.applyIfPending();
+    } else {
+      Plotly.relayout('plot', {
+        'xaxis.range': [startTime, endTime]
+      });
+    }
   });
 };

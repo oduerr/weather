@@ -362,4 +362,7 @@ Desired Behavior:
 
   By implementing the requirement be sure to add a new .js file and only do minimal changes at the existing code. This can be done by calling the weather app with the location as described above.
 
-
+  ### Feature Request 5:
+  - Swiping to the left or to the right should move forward of 1.5 times the current range of the x-axis. Since there are plotly graphs, be sure that you swipes are only counting if you are not in the area of the plotly graphs. So if you are above or below this gesture should work. Alternatively, it should also work when you press the left and right key. 
+  - Keep the changes minimal to the existing code. In doubt, add a new component.
+  -  

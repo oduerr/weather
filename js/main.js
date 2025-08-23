@@ -378,6 +378,19 @@ document.getElementById("viewAll").addEventListener("click", function() {
   }
 });
 
+// Add Navigation Button Event Handlers
+document.getElementById("navLeft").addEventListener("click", function() {
+  if (window.SwipeNavigation && typeof window.SwipeNavigation.handleSwipe === 'function') {
+    window.SwipeNavigation.handleSwipe('left');
+  }
+});
+
+document.getElementById("navRight").addEventListener("click", function() {
+  if (window.SwipeNavigation && typeof window.SwipeNavigation.handleSwipe === 'function') {
+    window.SwipeNavigation.handleSwipe('right');
+  }
+});
+
 // Set active style for view buttons
 const viewBtns = document.querySelectorAll('.view-btn');
 viewBtns.forEach(btn => {

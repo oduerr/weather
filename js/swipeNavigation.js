@@ -208,7 +208,7 @@ window.SwipeNavigation = {
    */
   calculateNewRange: function(currentRange, direction) {
     const currentWidth = currentRange.end - currentRange.start;
-    const panDistance = currentWidth * 1.5; // 1.5x current range
+    const panDistance = currentWidth * 0.75; // 0.5x current range
     
     let newStart, newEnd;
     
@@ -281,8 +281,19 @@ window.SwipeNavigation = {
     
     const formatTime = (date) => date.toISOString().replace('Z', '');
     
-    Plotly.relayout('plot', {
-      'xaxis.range': [formatTime(newRange.start), formatTime(newRange.end)]
+    Plotly.animate('plot', {
+      layout: {
+        'xaxis.range': [formatTime(newRange.start), formatTime(newRange.end)]
+      }
+    }, {
+      transition: {
+        duration: 600,  // 300ms animation
+        easing: 'ease-out'
+      },
+      frame: {
+        duration: 600,
+        redraw: false
+      }
     });
   },
   

@@ -349,3 +349,17 @@ Desired Behavior:
 	•	After the new model data is loaded and plotted, reapply the stored ranges.
 	•	If the stored range is partially outside the new data’s domain, clamp to the available range while keeping the zoom scale consistent.
   * Still keep the current behavior where the zoom is resetted when switching to different days via the buttons.
+
+
+  ### Feature Request 4: 
+  - At the screenshot after the last entry, add a entry pick location from map.
+
+  - This should open a map with a marker on the current location. The user should be able to navigate the map by panning and zooming. 
+
+  - The user should then be able to pick either the current location or any other location on that map and get the weather request by calling the weather app with the new location, like this:
+  https://oduerr.github.io/weather/?lat=52.5200&lon=13.4050&name=Berlin
+  Instead of berlin we would see current location.
+
+  By implementing the requirement be sure to add a new .js file and only do minimal changes at the existing code. This can be done by calling the weather app with the location as described above.
+
+

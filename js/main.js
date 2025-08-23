@@ -176,10 +176,7 @@ async function fetchAndPlot() {
  // }
   console.info("Selected Location ", selectedLoc);
 
-  const statusElement = document.getElementById("status");
-  if (statusElement) {
-      statusElement.textContent = "Checking selection...";
-  }
+  // Status element removed to save space
 
   if (selectedLoc && selectedLoc.name === "Konstanz") {
       window.WeatherAPI.fetchKonstanzWeather((airTemp, waterTemp) => {
@@ -200,13 +197,12 @@ async function fetchAndPlot() {
   }
 
   // Use the new API module
-  statusElement.textContent = "Fetching data...";
+  // Status element removed to save space
   
   // Check if API is available
   console.log("WeatherAPI available:", !!window.WeatherAPI);
   if (!window.WeatherAPI || !window.WeatherAPI.getWeatherDataWithFallback) {
     console.error("WeatherAPI not available");
-    statusElement.textContent = "API not loaded";
     return;
   }
   
@@ -233,10 +229,10 @@ async function fetchAndPlot() {
       console.error(`Panel '${selectedPanel}' not found or not enabled`);
     }
     
-    statusElement.textContent = `Data updated at ${new Date().toLocaleTimeString()}`;
+    // Data updated successfully (status element removed to save space)
   } catch (err) {
     console.error("Error fetching data:", err);
-    statusElement.textContent = "Error fetching data";
+    // Error status removed to save space - check console for errors
   }
 }
 

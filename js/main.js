@@ -38,7 +38,7 @@ const PANEL_CONFIG = {
   }
 };
 
-// Available locations and models (keeping existing structure for compatibility)
+// Available locations and models 
 const locations = [
   { name: "🇩🇪 Konstanz", lat: 47.6952, lon: 9.1307 },
   { name: "🇨🇭 🏔️ Chäserrugg", lat: 47.1549, lon: 9.3128 },
@@ -46,6 +46,7 @@ const locations = [
   { name: "🇨🇭 Zurich", lat: 47.3769, lon: 8.5417 },
   { name: "🇫🇮 Espoo", lat:60.205490, lon: 24.655899},
   { name: "🌲🌲 Fischbach", lat: 48.157652, lon: 8.487578 },
+  { name: "🇦🇹 St. Anton am Arlberg", lat: 47.1287, lon: 10.2640 }
 ];
 const models = [
   { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },

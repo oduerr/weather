@@ -155,27 +155,41 @@ modSelect.selectedIndex = 0;
 // ------------------------------
 // 3) Fetch & Plot Function
 // ------------------------------
-async function fetchAndPlot() {
+// Make fetchAndPlot globally accessible for location search integration
+window.fetchAndPlot = async function fetchAndPlot() {
 
 
-  // // Declare selectedLoc so it can be reassigned
-  // let selectedLoc = getUrlParams();
-  // console.error("Selected Location (from URL)", selectedLoc);
-  //if (selectedLoc === null) {
-    //locSelect = document.getElementById("locationSelect");
+  // Get selected location with proper fallback handling
   if (locSelect) {
+    // Handle special dropdown options that are not location data
+    const specialOptions = ['MAP_PICKER', 'SEARCH_LOCATION', 'CURRENT_LOCATION'];
+    
+    if (specialOptions.includes(locSelect.value)) {
+      selectedLoc = getUrlParams(); // Use URL parameters if available
+      console.log(`${locSelect.value} selected, using URL params:`, selectedLoc);
+    } else if (locSelect.value) {
       try {
-          selectedLoc = JSON.parse(locSelect.value);
-          console.log("Parsed selectedLoc:", selectedLoc);
+        selectedLoc = JSON.parse(locSelect.value);
+        console.log("Parsed selectedLoc from dropdown:", selectedLoc);
       } catch (e) {
-          console.error("Error parsing locSelect value:", e);
-          selectedLoc = null; // Reset to null if parsing fails
+        console.error("Error parsing locSelect value:", e);
+        selectedLoc = getUrlParams(); // Fallback to URL parameters
       }
+    } else {
+      selectedLoc = getUrlParams(); // Fallback to URL parameters
+    }
   } else {
-      console.error("locSelect element not found");
+    console.error("locSelect element not found");
+    selectedLoc = getUrlParams(); // Fallback to URL parameters
   }
- // }
-  console.info("Selected Location ", selectedLoc);
+
+  // Final fallback to Konstanz if nothing else works
+  if (!selectedLoc) {
+    selectedLoc = { lat: 47.6952, lon: 9.1307, name: 'Konstanz (Default)' };
+    console.log("Using default location:", selectedLoc);
+  }
+
+  console.info("Final Selected Location:", selectedLoc);
 
   // Status element removed to save space
 
@@ -235,7 +249,7 @@ async function fetchAndPlot() {
     console.error("Error fetching data:", err);
     // Error status removed to save space - check console for errors
   }
-}
+};
 
 // ------------------------------
 // 4) Process Data & Plot (Using Plotly.js)
@@ -330,21 +344,33 @@ window.ViewportPreserver = {
   }
 };
 
+// Handle browser back/forward navigation for location changes
+window.addEventListener('popstate', function(event) {
+  if (event.state && event.state.location) {
+    // Update location dropdown and trigger data fetch
+    const locationData = event.state.location;
+    if (window.LocationSearch) {
+      window.LocationSearch.addLocationToDropdown(locationData);
+    }
+    window.fetchAndPlot();
+  }
+});
+
 // Initialize the plot with default selections after API is loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Wait a bit to ensure API is loaded
   setTimeout(() => {
-    fetchAndPlot();
+    window.fetchAndPlot();
     
     // Re-plot when location, model, or panel changes
-    document.getElementById("locationSelect").addEventListener("change", fetchAndPlot);
+    document.getElementById("locationSelect").addEventListener("change", window.fetchAndPlot);
     document.getElementById("modelSelect").addEventListener("change", function() {
       if (window.ViewportPreserver && typeof window.ViewportPreserver.capture === 'function') {
         window.ViewportPreserver.capture();
       }
-      fetchAndPlot();
+      window.fetchAndPlot();
     });
-    document.getElementById("panelSelect").addEventListener("change", fetchAndPlot);
+    document.getElementById("panelSelect").addEventListener("change", window.fetchAndPlot);
   }, 100);
 });
 

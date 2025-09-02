@@ -553,9 +553,10 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
  */
 window.WeatherAPI.loadFixtureData = async function() {
   try {
-    const response = await fetch('./fixtures/sample.json');
+    // Use existing konstanz_weather.json fixture file
+    const response = await fetch('./fixtures/konstanz_weather.json');
     const data = await response.json();
-    console.log("✅ Loaded fixture data");
+    console.log("✅ Loaded fixture data from konstanz_weather.json");
     return data;
   } catch (error) {
     console.error("Error loading fixture data:", error);

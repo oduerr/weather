@@ -17,18 +17,31 @@ window.LocationPicker = {
   },
   
   /**
-   * Add "Pick location from map" option to the location dropdown
+   * Add location picker options to the location dropdown
    */
   addMapPickerOption: function() {
     const locationSelect = document.getElementById('locationSelect');
     if (!locationSelect) return;
     
-    // Add separator and map picker option
+    // Add separator and location picker options
     const separatorOption = document.createElement('option');
     separatorOption.disabled = true;
     separatorOption.textContent = '────────────────';
     locationSelect.appendChild(separatorOption);
     
+    // Search by name option
+    const searchOption = document.createElement('option');
+    searchOption.value = 'SEARCH_LOCATION';
+    searchOption.textContent = '🔍 Search for location';
+    locationSelect.appendChild(searchOption);
+    
+    // Current location option
+    const currentLocationOption = document.createElement('option');
+    currentLocationOption.value = 'CURRENT_LOCATION';
+    currentLocationOption.textContent = '📍 Use current location';
+    locationSelect.appendChild(currentLocationOption);
+    
+    // Map picker option
     const mapPickerOption = document.createElement('option');
     mapPickerOption.value = 'MAP_PICKER';
     mapPickerOption.textContent = '🗺️ Pick location from map';
@@ -46,7 +59,37 @@ window.LocationPicker = {
     const originalHandler = locationSelect.onchange;
     
     locationSelect.addEventListener('change', (event) => {
-      if (event.target.value === 'MAP_PICKER') {
+      const value = event.target.value;
+      
+      if (value === 'SEARCH_LOCATION') {
+        event.preventDefault();
+        event.stopPropagation();
+        // Trigger search mode in LocationSearch module
+        if (window.LocationSearch && typeof window.LocationSearch.toggleSearchMode === 'function') {
+          window.LocationSearch.toggleSearchMode();
+        }
+        // Reset to previous selection
+        setTimeout(() => {
+          locationSelect.selectedIndex = 0;
+        }, 100);
+        return false;
+      }
+      
+      if (value === 'CURRENT_LOCATION') {
+        event.preventDefault();
+        event.stopPropagation();
+        // Trigger current location in LocationSearch module
+        if (window.LocationSearch && typeof window.LocationSearch.getCurrentLocation === 'function') {
+          window.LocationSearch.getCurrentLocation();
+        }
+        // Reset to previous selection
+        setTimeout(() => {
+          locationSelect.selectedIndex = 0;
+        }, 100);
+        return false;
+      }
+      
+      if (value === 'MAP_PICKER') {
         event.preventDefault();
         event.stopPropagation();
         this.openMapModal();
@@ -56,6 +99,7 @@ window.LocationPicker = {
         }, 100);
         return false;
       }
+      
       // Call original handler for other options
       if (originalHandler) {
         originalHandler.call(locationSelect, event);
@@ -199,26 +243,59 @@ window.LocationPicker = {
   },
   
   /**
-   * Get current location from dropdown selection
+   * Get current location from dropdown selection or URL parameters
    */
   getCurrentLocation: function() {
     const locationSelect = document.getElementById('locationSelect');
-    if (!locationSelect || !locationSelect.value || locationSelect.value === 'MAP_PICKER') {
-      // Default to Konstanz if no valid selection
-      return { lat: 47.6952, lon: 9.1307, name: 'Current Location' };
+
+    // First priority: Check dropdown selection (works for predefined locations)
+    if (locationSelect && locationSelect.value && locationSelect.value !== 'MAP_PICKER') {
+      try {
+        const locationData = JSON.parse(locationSelect.value);
+        // Validate that we have proper coordinates
+        if (locationData.lat && locationData.lon) {
+          return {
+            lat: locationData.lat,
+            lon: locationData.lon,
+            name: locationData.name || 'Current Location'
+          };
+        }
+      } catch (e) {
+        console.log("Dropdown value is not JSON, checking URL parameters...");
+      }
     }
-    
-    try {
-      const locationData = JSON.parse(locationSelect.value);
-      return {
-        lat: locationData.lat,
-        lon: locationData.lon,
-        name: locationData.name || 'Current Location'
-      };
-    } catch (e) {
-      // Fallback to Konstanz
-      return { lat: 47.6952, lon: 9.1307, name: 'Current Location' };
+
+    // Second priority: Check URL parameters (works for search results)
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get("lat"));
+    const lon = parseFloat(params.get("lon"));
+    if (!isNaN(lat) && !isNaN(lon)) {
+      const name = params.get("name") || `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+      return { lat, lon, name };
     }
+
+    // Third priority: Check if dropdown has a valid selection (fallback for edge cases)
+    if (locationSelect && locationSelect.selectedIndex > 0 && locationSelect.selectedIndex < locationSelect.options.length) {
+      const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+      if (selectedOption && selectedOption.value && selectedOption.value !== 'MAP_PICKER') {
+        try {
+          const locationData = JSON.parse(selectedOption.value);
+          if (locationData.lat && locationData.lon) {
+            return {
+              lat: locationData.lat,
+              lon: locationData.lon,
+              name: locationData.name || selectedOption.textContent
+            };
+          }
+        } catch (e) {
+          // Continue to final fallback
+        }
+      }
+    }
+
+    // Final fallback to Konstanz
+    console.log("Using Konstanz as fallback location");
+    return { lat: 47.6952, lon: 9.1307, name: 'Konstanz (Default)' };
   },
   
   /**

@@ -197,7 +197,33 @@
     <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%;">
       <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
         <label for="locationSelect">📍</label>
-        <select id="locationSelect"></select>
+        <div style="position: relative; flex: 1;">
+          <select id="locationSelect"></select>
+          <!-- Location Search Input (initially hidden) -->
+          <div id="locationSearchContainer" style="display: none; position: relative;">
+            <input 
+              type="text" 
+              id="locationSearchInput" 
+              placeholder="Search for a location..." 
+              style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-height: 44px; box-sizing: border-box;"
+            />
+            <div id="locationSearchResults" style="
+              position: absolute;
+              top: 100%;
+              left: 0;
+              right: 0;
+              background: white;
+              border: 1px solid #ddd;
+              border-top: none;
+              border-radius: 0 0 8px 8px;
+              max-height: 200px;
+              overflow-y: auto;
+              z-index: 1000;
+              display: none;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            "></div>
+          </div>
+        </div>
       </div>
       
       <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
@@ -244,6 +270,7 @@
   <script src="./js/plot.js"></script>
   <script src="./js/visRegistry.js"></script>
   <script src="./js/locationPicker.js"></script>
+  <script src="./js/locationSearch.js"></script>
   <script src="./js/swipeNavigation.js"></script>
   <script src="./js/main.js"></script>
 

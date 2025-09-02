@@ -739,15 +739,20 @@ window.LocationSearch = {
       this.toggleSearchMode();
     }
     
-    // Update URL parameters and trigger data loading
-    const baseUrl = window.location.origin + window.location.pathname;
-    const newUrl = `${baseUrl}?lat=${roundedLat}&lon=${roundedLon}&name=${encodeURIComponent(location.name)}`;
-    
-    // Use pushState to update URL without full page reload
-    window.history.pushState({ location: locationData }, '', newUrl);
-    
     // Add to dropdown if not already present
     this.addLocationToDropdown(locationData);
+    
+    // Use the comprehensive URL update system
+    if (window.getCurrentAppState && window.updateUrlWithAppState) {
+      const currentState = window.getCurrentAppState();
+      currentState.location = locationData;
+      window.updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, currentState.view);
+    } else {
+      // Fallback to simple URL update
+      const baseUrl = window.location.origin + window.location.pathname;
+      const newUrl = `${baseUrl}?lat=${roundedLat}&lon=${roundedLon}&name=${encodeURIComponent(location.name)}`;
+      window.history.pushState({ location: locationData }, '', newUrl);
+    }
     
     // Trigger weather data fetch
     if (window.fetchAndPlot && typeof window.fetchAndPlot === 'function') {

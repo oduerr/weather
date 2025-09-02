@@ -86,16 +86,91 @@ const modSelect = document.getElementById("modelSelect");
 locSelect.selectedIndex = 0;
 modSelect.selectedIndex = 0;
 
-// Function to get URL parameters
+// Function to get all URL parameters
 function getUrlParams() {
   const params = new URLSearchParams(window.location.search);
+  
+  // Location parameters
   const lat = parseFloat(params.get("lat"));
   const lon = parseFloat(params.get("lon"));
-  if (!isNaN(lat) && !isNaN(lon)) {
-      const name = params.get("name") || `Custom ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-      return { lat, lon, name };
+  const locationData = (!isNaN(lat) && !isNaN(lon)) ? {
+    lat, lon, 
+    name: params.get("name") || `Custom ${lat.toFixed(4)}, ${lon.toFixed(4)}`
+  } : null;
+  
+  // Model parameter
+  const model = params.get("model");
+  
+  // Panel parameter  
+  const panel = params.get("panel");
+  
+  // View parameter (for time range)
+  const view = params.get("view");
+  
+  return {
+    location: locationData,
+    model: model,
+    panel: panel,
+    view: view
+  };
+}
+
+// Function to update URL with all current app state
+function updateUrlWithAppState(location, model, panel, view) {
+  if (!location) return;
+  
+  const params = new URLSearchParams();
+  params.set("lat", location.lat);
+  params.set("lon", location.lon);
+  params.set("name", location.name);
+  
+  if (model) params.set("model", model);
+  if (panel) params.set("panel", panel);
+  if (view) params.set("view", view);
+  
+  const baseUrl = window.location.origin + window.location.pathname;
+  const newUrl = `${baseUrl}?${params.toString()}`;
+  
+  window.history.pushState({ 
+    location: location,
+    model: model,
+    panel: panel,
+    view: view
+  }, '', newUrl);
+  
+  console.log("Updated URL with app state:", { location: location.name, model, panel, view });
+}
+
+// Function to get current app state
+function getCurrentAppState() {
+  const locationSelect = document.getElementById('locationSelect');
+  const modelSelect = document.getElementById('modelSelect');
+  const panelSelect = document.getElementById('panelSelect');
+  
+  let currentLocation = null;
+  const specialOptions = ['MAP_PICKER', 'SEARCH_LOCATION', 'CURRENT_LOCATION'];
+  
+  // Get current location
+  if (locationSelect && locationSelect.value && !specialOptions.includes(locationSelect.value)) {
+    try {
+      currentLocation = JSON.parse(locationSelect.value);
+    } catch (e) {
+      // Try URL params as fallback
+      const urlParams = getUrlParams();
+      currentLocation = urlParams.location;
+    }
+  } else {
+    // Try URL params as fallback
+    const urlParams = getUrlParams();
+    currentLocation = urlParams.location;
   }
-  return null;
+  
+  return {
+    location: currentLocation,
+    model: modelSelect ? modelSelect.value : null,
+    panel: panelSelect ? panelSelect.value : null,
+    view: null // Will be determined by view buttons
+  };
 }
 
 
@@ -113,8 +188,9 @@ function getUrlParams() {
 //   locSelect.appendChild(opt);
 // });
 
-// Check for location in URL
-const urlLocation = getUrlParams();
+// Check for all parameters in URL
+const urlParams = getUrlParams();
+const urlLocation = urlParams.location;
 if (urlLocation) {
   // Check if the location already exists in the dropdown
   let exists = false;
@@ -150,7 +226,24 @@ models.forEach(m => {
   opt.textContent = m.label;
   modSelect.appendChild(opt);
 });
-modSelect.selectedIndex = 0;
+
+// Set model from URL or default
+if (urlParams.model && models.find(m => m.id === urlParams.model)) {
+  modSelect.value = urlParams.model;
+  console.log("Set model from URL:", urlParams.model);
+} else {
+  modSelect.selectedIndex = 0;
+}
+
+// Set panel from URL or default
+const panelSelect = document.getElementById('panelSelect');
+if (urlParams.panel && panelSelect) {
+  const validPanels = ['temperature', 'uv_wind', 'actuals'];
+  if (validPanels.includes(urlParams.panel)) {
+    panelSelect.value = urlParams.panel;
+    console.log("Set panel from URL:", urlParams.panel);
+  }
+}
 
 // ------------------------------
 // 3) Fetch & Plot Function
@@ -344,17 +437,71 @@ window.ViewportPreserver = {
   }
 };
 
-// Handle browser back/forward navigation for location changes
+// Handle browser back/forward navigation for complete state restoration
 window.addEventListener('popstate', function(event) {
-  if (event.state && event.state.location) {
-    // Update location dropdown and trigger data fetch
-    const locationData = event.state.location;
-    if (window.LocationSearch) {
-      window.LocationSearch.addLocationToDropdown(locationData);
+  console.log('Popstate event:', event.state);
+  
+  if (event.state) {
+    // Restore location
+    if (event.state.location) {
+      const locationData = event.state.location;
+      if (window.LocationSearch) {
+        window.LocationSearch.addLocationToDropdown(locationData);
+      }
     }
+    
+    // Restore model selection
+    if (event.state.model) {
+      const modelSelect = document.getElementById('modelSelect');
+      if (modelSelect && models.find(m => m.id === event.state.model)) {
+        modelSelect.value = event.state.model;
+      }
+    }
+    
+    // Restore panel selection
+    if (event.state.panel) {
+      const panelSelect = document.getElementById('panelSelect');
+      if (panelSelect) {
+        panelSelect.value = event.state.panel;
+      }
+    }
+    
+    // Restore view if specified
+    if (event.state.view) {
+      // Handle view restoration after plot is ready
+      setTimeout(() => {
+        restoreViewFromUrl(event.state.view);
+      }, 500);
+    }
+    
     window.fetchAndPlot();
+  } else {
+    // No state, parse from URL
+    const urlParams = getUrlParams();
+    if (urlParams.location || urlParams.model || urlParams.panel) {
+      window.location.reload();
+    }
   }
 });
+
+// Function to restore view from URL parameter
+function restoreViewFromUrl(view) {
+  const viewButtons = {
+    '1d': 'view1d',
+    '2d': 'view2d', 
+    '5d': 'view5d',
+    'all': 'viewAll'
+  };
+  
+  const buttonId = viewButtons[view];
+  if (buttonId) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.click();
+      console.log('Restored view from URL:', view);
+    }
+  }
+}
 
 // Initialize the plot with default selections after API is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -362,31 +509,99 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(() => {
     window.fetchAndPlot();
     
+    // Restore view from URL if specified
+    if (urlParams.view) {
+      setTimeout(() => {
+        restoreViewFromUrl(urlParams.view);
+      }, 1000); // Wait for plot to be ready
+    }
+    
     // Re-plot when location, model, or panel changes
-    document.getElementById("locationSelect").addEventListener("change", window.fetchAndPlot);
-    document.getElementById("modelSelect").addEventListener("change", function() {
+    document.getElementById("locationSelect").addEventListener("change", function(event) {
+      const selectedValue = event.target.value;
+      const specialOptions = ['MAP_PICKER', 'SEARCH_LOCATION', 'CURRENT_LOCATION'];
+      
+      // If a regular location is selected, update the URL to keep everything in sync
+      if (selectedValue && !specialOptions.includes(selectedValue)) {
+        try {
+          const locationData = JSON.parse(selectedValue);
+          if (locationData.lat && locationData.lon && locationData.name) {
+            // Get current app state and update URL with new location
+            const modelSelect = document.getElementById('modelSelect');
+            const panelSelect = document.getElementById('panelSelect');
+            
+            updateUrlWithAppState(
+              locationData, // Use the new location directly
+              modelSelect ? modelSelect.value : null,
+              panelSelect ? panelSelect.value : null,
+              null // view will be determined by view buttons
+            );
+            console.log("Updated URL for location change:", locationData.name);
+          }
+        } catch (e) {
+          console.log("Could not parse location data for URL update", e);
+        }
+      }
+      
+      // Always fetch and plot the weather data
+      window.fetchAndPlot();
+    });
+    document.getElementById("modelSelect").addEventListener("change", function(event) {
       if (window.ViewportPreserver && typeof window.ViewportPreserver.capture === 'function') {
         window.ViewportPreserver.capture();
       }
+      
+      // Update URL with new model selection
+      const currentState = getCurrentAppState();
+      updateUrlWithAppState(
+        currentState.location, 
+        event.target.value, // Use the new model directly
+        currentState.panel, 
+        currentState.view
+      );
+      console.log("Updated URL for model change:", event.target.value);
+      
       window.fetchAndPlot();
     });
-    document.getElementById("panelSelect").addEventListener("change", window.fetchAndPlot);
+    
+    document.getElementById("panelSelect").addEventListener("change", function(event) {
+      // Update URL with new panel selection
+      const currentState = getCurrentAppState();
+      updateUrlWithAppState(
+        currentState.location, 
+        currentState.model, 
+        event.target.value, // Use the new panel directly
+        currentState.view
+      );
+      console.log("Updated URL for panel change:", event.target.value);
+      
+      window.fetchAndPlot();
+    });
   }, 100);
 });
 
-// Add View Range Button Event Handlers
+// Add View Range Button Event Handlers with URL updates
 document.getElementById("view1d").addEventListener("click", function() {
   if (window.WeatherPlot && typeof window.WeatherPlot.viewOneDay === 'function') {
     window.WeatherPlot.viewOneDay();
   }
+  // Update URL with view parameter
+  const currentState = getCurrentAppState();
+  updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '1d');
 });
 
 document.getElementById("view2d").addEventListener("click", function() {
   window.WeatherPlot.adjustViewRange(2);
+  // Update URL with view parameter
+  const currentState = getCurrentAppState();
+  updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '2d');
 });
 
 document.getElementById("view5d").addEventListener("click", function() {
   window.WeatherPlot.adjustViewRange(5);
+  // Update URL with view parameter
+  const currentState = getCurrentAppState();
+  updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '5d');
 });
 
 document.getElementById("viewAll").addEventListener("click", function() {
@@ -399,6 +614,9 @@ document.getElementById("viewAll").addEventListener("click", function() {
       'xaxis.range': [startTime, endTime]
     });
   }
+  // Update URL with view parameter
+  const currentState = getCurrentAppState();
+  updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, 'all');
 });
 
 // Add Navigation Button Event Handlers

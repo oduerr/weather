@@ -247,13 +247,15 @@ window.LocationPicker = {
    */
   getCurrentLocation: function() {
     const locationSelect = document.getElementById('locationSelect');
+    const specialOptions = ['MAP_PICKER', 'SEARCH_LOCATION', 'CURRENT_LOCATION'];
 
     // First priority: Check dropdown selection (works for predefined locations)
-    if (locationSelect && locationSelect.value && locationSelect.value !== 'MAP_PICKER') {
+    if (locationSelect && locationSelect.value && !specialOptions.includes(locationSelect.value)) {
       try {
         const locationData = JSON.parse(locationSelect.value);
         // Validate that we have proper coordinates
         if (locationData.lat && locationData.lon) {
+          console.log("Using dropdown location for map:", locationData);
           return {
             lat: locationData.lat,
             lon: locationData.lon,
@@ -271,16 +273,18 @@ window.LocationPicker = {
     const lon = parseFloat(params.get("lon"));
     if (!isNaN(lat) && !isNaN(lon)) {
       const name = params.get("name") || `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+      console.log("Using URL location for map:", { lat, lon, name });
       return { lat, lon, name };
     }
 
     // Third priority: Check if dropdown has a valid selection (fallback for edge cases)
-    if (locationSelect && locationSelect.selectedIndex > 0 && locationSelect.selectedIndex < locationSelect.options.length) {
+    if (locationSelect && locationSelect.selectedIndex >= 0 && locationSelect.selectedIndex < locationSelect.options.length) {
       const selectedOption = locationSelect.options[locationSelect.selectedIndex];
-      if (selectedOption && selectedOption.value && selectedOption.value !== 'MAP_PICKER') {
+      if (selectedOption && selectedOption.value && !specialOptions.includes(selectedOption.value)) {
         try {
           const locationData = JSON.parse(selectedOption.value);
           if (locationData.lat && locationData.lon) {
+            console.log("Using selected option for map:", locationData);
             return {
               lat: locationData.lat,
               lon: locationData.lon,

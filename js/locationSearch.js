@@ -700,11 +700,9 @@ window.LocationSearch = {
    */
   reverseGeocode: async function(lat, lon) {
     try {
-      // Since Open-Meteo doesn't support reverse geocoding, we'll use a simple coordinate-based name
-      // and try to find nearby cities by searching in a small radius
-      
-      // For now, just use coordinates as the name
-      const locationName = `📍 Current Location (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+      // Since Open-Meteo doesn't support reverse geocoding, use a simple clean name
+      // Coordinates are already in the URL parameters, so no need to include them in the name
+      const locationName = 'Current Location';
       
       // Navigate to the location
       this.navigateToLocation({ lat, lon, name: locationName });
@@ -712,8 +710,8 @@ window.LocationSearch = {
     } catch (error) {
       console.error('Reverse geocoding error:', error);
       
-      // Use coordinates as fallback name
-      const locationName = `📍 Current Location (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+      // Use simple fallback name - coordinates are in URL parameters anyway
+      const locationName = 'Current Location';
       this.navigateToLocation({ lat, lon, name: locationName });
     }
   },
@@ -763,31 +761,62 @@ window.LocationSearch = {
   addLocationToDropdown: function(locationData) {
     const locationSelect = document.getElementById('locationSelect');
     
-    // Check if location already exists
+    // Decode the location name in case it came from URL parameters
+    const decodedName = decodeURIComponent(locationData.name);
+    const cleanLocationData = {
+      lat: locationData.lat,
+      lon: locationData.lon,
+      name: decodedName
+    };
+    
+    // Check if location already exists (check by coordinates)
     let exists = false;
+    let existingIndex = -1;
+    
     for (let i = 0; i < locationSelect.options.length; i++) {
       const option = locationSelect.options[i];
       try {
         const optValue = JSON.parse(option.value);
-        if (Math.abs(optValue.lat - locationData.lat) < 0.001 && 
-            Math.abs(optValue.lon - locationData.lon) < 0.001) {
+        if (Math.abs(optValue.lat - cleanLocationData.lat) < 0.001 && 
+            Math.abs(optValue.lon - cleanLocationData.lon) < 0.001) {
           exists = true;
-          locationSelect.selectedIndex = i;
+          existingIndex = i;
           break;
         }
       } catch (e) {
-        // Skip invalid options
+        // Skip invalid options (like MAP_PICKER, etc.)
         continue;
       }
     }
     
-    // Add new option if it doesn't exist
-    if (!exists) {
+    if (exists) {
+      // Select the existing option
+      locationSelect.selectedIndex = existingIndex;
+      console.log("Selected existing location at index:", existingIndex);
+    } else {
+      // Add new option and select it
       const option = document.createElement('option');
-      option.value = JSON.stringify(locationData);
-      option.textContent = locationData.name;
-      option.selected = true;
-      locationSelect.appendChild(option);
+      option.value = JSON.stringify(cleanLocationData);
+      option.textContent = cleanLocationData.name;
+      
+      // Insert before the separator (find the first disabled option)
+      let insertIndex = locationSelect.options.length;
+      for (let i = 0; i < locationSelect.options.length; i++) {
+        if (locationSelect.options[i].disabled) {
+          insertIndex = i;
+          break;
+        }
+      }
+      
+      if (insertIndex < locationSelect.options.length) {
+        locationSelect.insertBefore(option, locationSelect.options[insertIndex]);
+        locationSelect.selectedIndex = insertIndex;
+      } else {
+        locationSelect.appendChild(option);
+        locationSelect.selectedIndex = locationSelect.options.length - 1;
+      }
+      
+      console.log("Added new location:", cleanLocationData);
     }
   }
 };

@@ -157,6 +157,23 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   };
   const weatherIcons = weatherCode.map(code => weatherIconMap[code] || "");
 
+  // Calculate synchronized range for temperature and dew point axes
+  let tempDewRange = {};
+  if (temperature.length > 0 && dewPoint.length > 0) {
+    const allTempValues = [...temperature, ...dewPoint].filter(val => val !== null && val !== undefined && !isNaN(val));
+    if (allTempValues.length > 0) {
+      const minVal = Math.min(...allTempValues);
+      const maxVal = Math.max(...allTempValues);
+      // Add some padding (5% on each side)
+      const padding = (maxVal - minVal) * 0.05;
+      tempDewRange = {
+        min: Math.floor(minVal - padding),
+        max: Math.ceil(maxVal + padding)
+      };
+      console.log(`🌡️ Synchronized temp/dew point range: ${tempDewRange.min}°C to ${tempDewRange.max}°C`);
+    }
+  }
+
   // Make Date Objects for all sunrises and sunsets
   const sunrises = (forecast.daily && forecast.daily.sunrise || []).map(sunrise => new Date(sunrise));
   const sunsets = (forecast.daily && forecast.daily.sunset || []).map(sunset => new Date(sunset));
@@ -164,7 +181,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   // Build traces for 3 rows:
   // Row 1: Temperature, Dew Point, and Weather Icons
   const traceTemp = { x: timesLocal, y: temperature, mode: 'lines', name: 'Temperature (°C)', line: { color: 'red' }, yaxis: "y1" };
-  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 1, dash: 'dot' }, opacity: 0.6, yaxis: "y1" };
+  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 1, dash: 'dot' }, opacity: 0.6, yaxis: "y2" };
   const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
 
   // Weather Station Data Integration (Konstanz only)
@@ -257,8 +274,8 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
 
   // Ensemble traces for temperature
   const traceTempEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "temperature_2m", "y1", "red");
-  const traceHumEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "relative_humidity_2m", "y2", "blue");
-  const tracePrecipEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "precipitation", "y3", "skyblue");
+  const traceHumEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "relative_humidity_2m", "y4", "blue");
+  const tracePrecipEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "precipitation", "y3", "green");
   const traceCloudEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "cloud_cover", "y5", "black");
   
   // Weather code ensemble mode trace
@@ -343,7 +360,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   let allTraces;
   if (model.type === "ensemble") {
     allTraces = [
-      ...traceTempEnsemble, ...tracePrecipEnsemble, ...traceCloudEnsemble,
+      ...traceTempEnsemble, ...traceHumEnsemble, ...tracePrecipEnsemble, ...traceCloudEnsemble,
       ...traceWeatherCodeEnsemble,
     ];
   } else {
@@ -408,7 +425,19 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       range: [startTime, endTime]
     },
 
-    yaxis1: { title: "Temp (°C)", domain: [0.70, 1], color: "red" },  // 🔼 Slightly larger top row
+    yaxis1: {
+      title: "Temperature (°C)",
+      domain: [0.70, 1],
+      color: "red",
+      ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
+    },  // 🔼 Slightly larger top row
+    yaxis2: {
+      title: "Dew Point (°C)",
+      overlaying: "y1",
+      side: "right",
+      color: "blue",
+      ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
+    },
 
     yaxis3: { title: "🌧️ (mm)", domain: [0.45, 0.70], color: "green" },  // 🔽 Smaller middle row
     yaxis4: { title: "Humidity % | 🌧️ Prob % | ☀️ %", overlaying: "y3", side: "right", color: "black" },

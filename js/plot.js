@@ -276,7 +276,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const traceCloudLow = { x: xMirror, y: lowCloud.up.concat(lowCloud.down.reverse()), fill: 'toself', mode: 'lines', name: 'Cloud Cover Low', line: { color: 'lightblue', width: 1 }, opacity: 0.6, yaxis: "y5" };
   const traceCloudMid = { x: xMirror, y: midCloud.up.concat(midCloud.down.reverse()), fill: 'toself', mode: 'lines', name: 'Cloud Cover Mid', line: { color: 'gray', width: 1 }, opacity: 0.6, yaxis: "y5" };
   const traceCloudHigh = { x: xMirror, y: highCloud.up.concat(highCloud.down.reverse()), fill: 'toself', mode: 'lines', name: 'Cloud Cover High', line: { color: 'black', width: 1 }, opacity: 0.6, yaxis: "y5" };
-  const traceCloudTotal = { x: timesLocal, y: cloudCover, mode: 'lines', name: 'Total Cloud Cover', line: { color: 'black', width: 2 }, yaxis: "y5" };
+  //const traceCloudTotal = { x: timesLocal, y: cloudCover, mode: 'lines', name: 'Total Cloud Cover', line: { color: 'black', width: 2 }, yaxis: "y5" };
   const traceVisibility = { x: timesLocal, y: visibility, mode: 'lines', name: 'Visibility (km)', line: { color: 'brown', width: 2, dash: 'dot' }, yaxis: "y6" };
 
   // Ensemble traces for temperature
@@ -374,7 +374,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     allTraces = [
       traceTemp, traceDew, traceIcons,
       tracePrecip, tracePrecipProb, traceHum,
-      traceCloudLow, traceCloudMid, traceCloudHigh, traceCloudTotal,
+      traceCloudLow, traceCloudMid, traceCloudHigh,
       traceVisibility
     ];
   }
@@ -447,7 +447,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     },
 
     yaxis3: { title: "Rainfall (mm)", domain: [0.45, 0.70], color: "#1E3A8A" },  // 🔽 Smaller middle row
-    yaxis4: { title: "Humidity (%) / Rain Probability (%)", overlaying: "y3", side: "right", color: "#008B8B" },
+    yaxis4: { title: "Rain Probability (%) / Humidity (%) ", overlaying: "y3", side: "right", color: "#008B8B" },
 
     yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35] },  // 🔼 More space for bottom row
     yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", range: [0, 100], color: "darkred" },

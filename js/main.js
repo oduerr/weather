@@ -45,8 +45,7 @@ const locations = [
   { name: "🇨🇭 🏔️ Wildhaus", lat: 47.2033, lon: 9.3505 },
   { name: "🇨🇭 Zurich", lat: 47.3769, lon: 8.5417 },
   { name: "🇫🇮 Espoo", lat:60.205490, lon: 24.655899},
-  { name: "🌲🌲 Fischbach", lat: 48.157652, lon: 8.487578 },
-  { name: "🇦🇹 St. Anton am Arlberg", lat: 47.1287, lon: 10.2640 }
+  { name: "🌲🌲 Fischbach", lat: 48.157652, lon: 8.487578 }
 ];
 const models = [
   { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },
@@ -288,8 +287,12 @@ window.fetchAndPlot = async function fetchAndPlot() {
 
   if (selectedLoc && selectedLoc.name === "Konstanz") {
       window.WeatherAPI.fetchKonstanzWeather((airTemp, waterTemp) => {
-          document.getElementById("konstanzTemperature").textContent = 
-              "Current Temperature: " + airTemp + "°C";
+          if (isNaN(airTemp) || airTemp === "N/A") {
+              document.getElementById("konstanzTemperature").textContent = "Weather data unavailable";
+          } else {
+              document.getElementById("konstanzTemperature").textContent =
+                  "Current Temperature: " + airTemp + "°C";
+          }
       });
   } else {
       document.getElementById("konstanzTemperature").textContent = "";

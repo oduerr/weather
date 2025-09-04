@@ -143,9 +143,9 @@ window.WeatherAPI.getKonstanzWeatherStationData = async function(currentDate) {
   
   const rawData = await window.WeatherAPI.fetchWeatherStationData(formatDate(startTime), formatDate(endTime));
   
-  // If API fails due to CORS, use mock data for demonstration
+  // If API fails due to CORS or no data available, return NaN values
   if (rawData.length === 0) {
-    console.log("🔄 Using mock weather station data due to CORS restrictions");
+    console.log("⚠️ Konstanz weather station data unavailable - returning NaN values");
     return window.WeatherAPI.getMockWeatherStationData(currentDate);
   }
   
@@ -153,9 +153,9 @@ window.WeatherAPI.getKonstanzWeatherStationData = async function(currentDate) {
 }
 
 /**
- * Generate mock weather station data for demonstration
+ * Return NaN values when no real weather station data is available
  * @param {string} currentDate - Current date in YYYY-MM-DD format
- * @returns {Object} Mock weather station data
+ * @returns {Object} Weather station data with NaN values
  */
 window.WeatherAPI.getMockWeatherStationData = function(currentDate) {
   const mockData = {
@@ -163,28 +163,20 @@ window.WeatherAPI.getMockWeatherStationData = function(currentDate) {
     waterTemperature: [],
     times: []
   };
-  
-  // Generate mock data for the current day (hourly averages)
+
+  // Generate NaN values for the current day (hourly)
   const now = new Date();
   const currentHour = now.getHours();
-  
+
   for (let hour = 0; hour <= currentHour; hour++) {
     const time = `${currentDate}T${hour.toString().padStart(2, '0')}:00:00`;
-    
-    // Generate realistic temperature data (20-30°C range)
-    const baseTemp = 25;
-    const tempVariation = Math.sin(hour / 24 * 2 * Math.PI) * 5;
-    const temp = baseTemp + tempVariation + (Math.random() - 0.5) * 2;
-    
-    // Generate water temperature (slightly cooler than air)
-    const waterTemp = temp - 5 + (Math.random() - 0.5) * 1;
-    
-    mockData.temperature.push(Math.round(temp * 10) / 10);
-    mockData.waterTemperature.push(Math.round(waterTemp * 10) / 10);
+
+    mockData.temperature.push(NaN);
+    mockData.waterTemperature.push(NaN);
     mockData.times.push(time);
   }
-  
-  console.log("✅ Generated mock weather station data:", mockData.times.length, "measurements");
+
+  console.log("⚠️ No real weather station data available - returning NaN values for", mockData.times.length, "measurements");
   return mockData;
 }
 
@@ -396,13 +388,13 @@ window.WeatherAPI.fetchKonstanzWeather = function(callback) {
   fetch("https://www.uni-konstanz.de/hsp/wetter/data/current.json")
       .then(response => response.json())
       .then(data => {
-          const airTemp = data.temperature?.value || "N/A";
-          const waterTemp = data.temperature_water?.value || "N/A";
+          const airTemp = data.temperature?.value || NaN;
+          const waterTemp = data.temperature_water?.value || NaN;
           callback(airTemp, waterTemp);
       })
       .catch(error => {
           console.error("Error fetching Konstanz weather:", error);
-          callback("N/A", "N/A");  // Fallback values
+          callback(NaN, NaN);  // Fallback values
       });
 }
 

@@ -162,57 +162,79 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const sunsets = (forecast.daily && forecast.daily.sunset || []).map(sunset => new Date(sunset));
 
   // Build traces for 3 rows:
-  // Row 1: Temperature, Dew Point, Humidity, and Weather Icons
+  // Row 1: Temperature, Dew Point, and Weather Icons
   const traceTemp = { x: timesLocal, y: temperature, mode: 'lines', name: 'Temperature (°C)', line: { color: 'red' }, yaxis: "y1" };
-  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'red', width: 1, dash: 'dot' }, opacity: 0.6, yaxis: "y1" };
+  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 1, dash: 'dot' }, opacity: 0.6, yaxis: "y1" };
   const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
-  // Humidity on secondary y-axis
-  const traceHum = { x: timesLocal, y: humidity, mode: 'lines', name: 'Humidity (%)', line: { color: 'royalblue' }, yaxis: "y2" };
 
   // Weather Station Data Integration (Konstanz only)
   let weatherStationTraces = [];
-  
+
   if (observations && observations.weatherStation && observations.weatherStation.temperature.length > 0) {
     const stationData = observations.weatherStation;
-    
-    // Add weather station temperature trace
-    const traceStationTemp = {
-      x: stationData.times,
-      y: stationData.temperature,
-      mode: 'markers+lines',
-      name: 'Weather Station (°C)',
-      line: { color: 'darkred', width: 1 },
-      marker: { size: 3, color: 'darkred' },
-      yaxis: "y1"
-    };
-    weatherStationTraces.push(traceStationTemp);
-    
-    // Add water if available
-    if (stationData.waterTemperature.length) {
-      console.log("📊 Water temperature data available:", stationData.waterTemperature.length, "measurements");
-      
-      // Create water temperature trace that starts from sunset time
-      const traceWaterTemp = {
-        x: stationData.times,
-        y: stationData.waterTemperature,
+
+    // Filter out NaN values for temperature
+    const validTempIndices = stationData.temperature
+      .map((temp, index) => !isNaN(temp) ? index : -1)
+      .filter(index => index !== -1);
+
+    if (validTempIndices.length > 0) {
+      // Add weather station temperature trace (only valid values)
+      const validTimes = validTempIndices.map(i => stationData.times[i]);
+      const validTemps = validTempIndices.map(i => stationData.temperature[i]);
+
+      const traceStationTemp = {
+        x: validTimes,
+        y: validTemps,
         mode: 'markers+lines',
-        name: 'Water Temperature (°C)',
-        line: { color: 'blue', width: 2, dash: 'dot' },
-        marker: { size: 2, color: 'blue' },
+        name: 'Weather Station (°C)',
+        line: { color: 'darkred', width: 1 },
+        marker: { size: 3, color: 'darkred' },
         yaxis: "y1"
       };
-      
-      // Add the water temperature trace after the temperature trace
-      weatherStationTraces.push(traceWaterTemp);
+      weatherStationTraces.push(traceStationTemp);
+
+      // Add water temperature if available
+      if (stationData.waterTemperature.length) {
+        const validWaterIndices = stationData.waterTemperature
+          .map((temp, index) => !isNaN(temp) ? index : -1)
+          .filter(index => index !== -1);
+
+        if (validWaterIndices.length > 0) {
+          console.log("📊 Water temperature data available:", validWaterIndices.length, "valid measurements");
+
+          // Create water temperature trace with only valid values
+          const validWaterTimes = validWaterIndices.map(i => stationData.times[i]);
+          const validWaterTemps = validWaterIndices.map(i => stationData.waterTemperature[i]);
+
+          const traceWaterTemp = {
+            x: validWaterTimes,
+            y: validWaterTemps,
+            mode: 'markers+lines',
+            name: 'Water Temperature (°C)',
+            line: { color: 'blue', width: 2, dash: 'dot' },
+            marker: { size: 2, color: 'blue' },
+            yaxis: "y1"
+          };
+
+          // Add the water temperature trace after the temperature trace
+          weatherStationTraces.push(traceWaterTemp);
+        } else {
+          console.log("⚠️ Water temperature data contains only NaN values - not displaying");
+        }
+      }
+    } else {
+      console.log("⚠️ Weather station temperature data contains only NaN values - not displaying");
     }
   }
 
-  // Row 2: Precipitation and Precipitation Probability
+  // Row 2: Precipitation, Precipitation Probability, Humidity, and Sunshine Percentage
   // Ensure precipitation is never negative
   const cleanPrecipitation = precipitation.map(p => Math.max(0, p));
-  const tracePrecip = { x: timesLocal, y: cleanPrecipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'skyblue' }, yaxis: "y3" };
-  // Precipitation Probability and Sunshine Percentage on secondary y-axis
-  const tracePrecipProb = { x: timesLocal, y: precipProb, mode: 'lines', name: 'Precipitation Prob (%)', line: { color: 'green' }, yaxis: "y4" };
+  const tracePrecip = { x: timesLocal, y: cleanPrecipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'green' }, yaxis: "y3" };
+  // Precipitation Probability, Humidity, and Sunshine Percentage on secondary y-axis
+  const tracePrecipProb = { x: timesLocal, y: precipProb, mode: 'lines', name: 'Precipitation Prob (%)', line: { color: 'orange' }, yaxis: "y4" };
+  const traceHum = { x: timesLocal, y: humidity, mode: 'lines', name: 'Humidity (%)', line: { color: 'blue' }, yaxis: "y4" };
   const traceSunshine = { x: timesLocal, y: sunshinePercentage, mode: 'lines', name: 'Sunshine (%)', line: { color: '#FFA500' }, yaxis: "y4" };
 
   // Row 3: Cloud Cover and Visibility
@@ -321,13 +343,13 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   let allTraces;
   if (model.type === "ensemble") {
     allTraces = [
-      ...traceTempEnsemble, ...traceHumEnsemble, ...tracePrecipEnsemble, ...traceCloudEnsemble,
+      ...traceTempEnsemble, ...tracePrecipEnsemble, ...traceCloudEnsemble,
       ...traceWeatherCodeEnsemble,
     ];
   } else {
     allTraces = [
-      traceTemp, traceDew, traceHum, traceIcons,
-      tracePrecip, tracePrecipProb, traceSunshine,
+      traceTemp, traceDew, traceIcons,
+      tracePrecip, tracePrecipProb, traceHum, traceSunshine,
       traceCloudLow, traceCloudMid, traceCloudHigh, traceCloudTotal,
       traceVisibility
     ];
@@ -387,10 +409,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     },
 
     yaxis1: { title: "Temp (°C)", domain: [0.70, 1], color: "red" },  // 🔼 Slightly larger top row
-    yaxis2: { title: "Humidity (%)", overlaying: "y", side: "right", color: "blue" },
 
-    yaxis3: { title: "🌧️ (mm)", domain: [0.45, 0.70], color: "skyblue" },  // 🔽 Smaller middle row
-    yaxis4: { title: "🌧️ Prob % | ☀️ %", overlaying: "y3", side: "right", color: "black" },
+    yaxis3: { title: "🌧️ (mm)", domain: [0.45, 0.70], color: "green" },  // 🔽 Smaller middle row
+    yaxis4: { title: "Humidity % | 🌧️ Prob % | ☀️ %", overlaying: "y3", side: "right", color: "black" },
 
     yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35] },  // 🔼 More space for bottom row
     yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", range: [0, 100], color: "darkred" },

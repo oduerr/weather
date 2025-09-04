@@ -143,7 +143,6 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const cloudCoverHigh = hourly.cloud_cover_high || [];
   const visibility = (hourly.visibility || []).map(v => v / 1000);
   const weatherCode = hourly.weather_code || [];
-  const sunshinePercentage = (hourly.sunshine_duration || []).map(v => v / 3600 * 100);  // Sunshine Percentage
 
   // Weather icons mapping
   const weatherIconMap = {
@@ -181,7 +180,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   // Build traces for 3 rows:
   // Row 1: Temperature, Dew Point, and Weather Icons
   const traceTemp = { x: timesLocal, y: temperature, mode: 'lines', name: 'Temperature (°C)', line: { color: 'red' }, yaxis: "y1" };
-  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 1, dash: 'dot' }, opacity: 0.6, yaxis: "y2" };
+  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 2, dash: 'dot' }, opacity: 0.6, yaxis: "y2" };
   const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
 
   // Weather Station Data Integration (Konstanz only)
@@ -245,14 +244,13 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     }
   }
 
-  // Row 2: Precipitation, Precipitation Probability, Humidity, and Sunshine Percentage
+  // Row 2: Precipitation, Precipitation Probability, and Humidity
   // Ensure precipitation is never negative
   const cleanPrecipitation = precipitation.map(p => Math.max(0, p));
   const tracePrecip = { x: timesLocal, y: cleanPrecipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'green' }, yaxis: "y3" };
-  // Precipitation Probability, Humidity, and Sunshine Percentage on secondary y-axis
+  // Precipitation Probability and Humidity on secondary y-axis
   const tracePrecipProb = { x: timesLocal, y: precipProb, mode: 'lines', name: 'Precipitation Prob (%)', line: { color: 'orange' }, yaxis: "y4" };
   const traceHum = { x: timesLocal, y: humidity, mode: 'lines', name: 'Humidity (%)', line: { color: 'blue' }, yaxis: "y4" };
-  const traceSunshine = { x: timesLocal, y: sunshinePercentage, mode: 'lines', name: 'Sunshine (%)', line: { color: '#FFA500' }, yaxis: "y4" };
 
   // Row 3: Cloud Cover and Visibility
   // Create cloud cover "tiles" using a scale function
@@ -366,7 +364,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   } else {
     allTraces = [
       traceTemp, traceDew, traceIcons,
-      tracePrecip, tracePrecipProb, traceHum, traceSunshine,
+      tracePrecip, tracePrecipProb, traceHum,
       traceCloudLow, traceCloudMid, traceCloudHigh, traceCloudTotal,
       traceVisibility
     ];
@@ -440,7 +438,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     },
 
     yaxis3: { title: "🌧️ (mm)", domain: [0.45, 0.70], color: "green" },  // 🔽 Smaller middle row
-    yaxis4: { title: "Humidity % | 🌧️ Prob % | ☀️ %", overlaying: "y3", side: "right", color: "black" },
+    yaxis4: { title: "Humidity % | 🌧️ Prob %", overlaying: "y3", side: "right", color: "black" },
 
     yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35] },  // 🔼 More space for bottom row
     yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", range: [0, 100], color: "darkred" },

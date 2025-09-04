@@ -244,13 +244,22 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     }
   }
 
-  // Row 2: Precipitation, Precipitation Probability, and Humidity
+  // Row 2: Rainfall, Rain Probability, and Humidity
   // Ensure precipitation is never negative
   const cleanPrecipitation = precipitation.map(p => Math.max(0, p));
-  const tracePrecip = { x: timesLocal, y: cleanPrecipitation, type: 'bar', name: 'Precipitation (mm)', marker: { color: 'green' }, yaxis: "y3" };
-  // Precipitation Probability and Humidity on secondary y-axis
-  const tracePrecipProb = { x: timesLocal, y: precipProb, mode: 'lines', name: 'Precipitation Prob (%)', line: { color: 'orange' }, yaxis: "y4" };
-  const traceHum = { x: timesLocal, y: humidity, mode: 'lines', name: 'Humidity (%)', line: { color: 'blue' }, yaxis: "y4" };
+  const tracePrecip = { x: timesLocal, y: cleanPrecipitation, type: 'bar', name: 'Rainfall (mm)', marker: { color: '#1E3A8A' }, yaxis: "y3" };
+  // Rain Probability and Humidity on secondary y-axis
+  const tracePrecipProb = {
+    x: timesLocal,
+    y: precipProb,
+    mode: 'lines',
+    name: 'Rain Probability (%)',
+    line: { color: '#87CEEB', width: 1 },
+    fill: 'tozeroy',
+    fillcolor: 'rgba(135, 206, 235, 0.12)',
+    yaxis: "y4"
+  };
+  const traceHum = { x: timesLocal, y: humidity, mode: 'lines', name: 'Humidity (%)', line: { color: '#008B8B' }, yaxis: "y4" };
 
   // Row 3: Cloud Cover and Visibility
   // Create cloud cover "tiles" using a scale function
@@ -437,8 +446,8 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
     },
 
-    yaxis3: { title: "🌧️ (mm)", domain: [0.45, 0.70], color: "green" },  // 🔽 Smaller middle row
-    yaxis4: { title: "Humidity % | 🌧️ Prob %", overlaying: "y3", side: "right", color: "black" },
+    yaxis3: { title: "Rainfall (mm)", domain: [0.45, 0.70], color: "#1E3A8A" },  // 🔽 Smaller middle row
+    yaxis4: { title: "Humidity (%) / Rain Probability (%)", overlaying: "y3", side: "right", color: "#008B8B" },
 
     yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35] },  // 🔼 More space for bottom row
     yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", range: [0, 100], color: "darkred" },

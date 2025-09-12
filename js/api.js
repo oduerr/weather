@@ -447,7 +447,7 @@ window.WeatherAPI.getForecastData = async function(location, model) {
   // Define model-specific forecast day limits
   const MODEL_FORECAST_LIMITS = {
     // Local high-resolution models (2-5 days)
-    'icon_d2': 5,                    // ICON D2 - up to 5 days
+    'icon_d2': 2,                    // ICON D2 48h - 2 days (48 hours)
     'arome_france': 2,                // AROME France - 42 hours
     'meteoswiss_icon_ch1': 2,        // MeteoSwiss ICON CH1 - 33 hours
     'meteoswiss_icon_ch2': 5,        // MeteoSwiss ICON CH2 - 120 hours

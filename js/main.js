@@ -56,6 +56,37 @@ const locations = [
   { name: "🇫🇮 Espoo", lat:60.205490, lon: 24.655899},
   { name: "🌲🌲 Fischbach", lat: 48.157652, lon: 8.487578 }
 ];
+
+// Model forecast limits and categories (same as in API)
+const MODEL_INFO = {
+  // Local high-resolution models (2-5 days)
+  'icon_d2': { days: 2, category: 'Ultra High-Res' },  // ICON D2 48h = 2 days
+  'arome_france': { days: 2, category: 'Ultra High-Res' },
+  'meteoswiss_icon_ch1': { days: 2, category: 'Ultra High-Res' },
+  'meteoswiss_icon_ch2': { days: 5, category: 'Regional' },
+  'knmi_harmonie_arome_europe': { days: 2, category: 'Ultra High-Res' },
+  'dmi_harmonie_arome_europe': { days: 2, category: 'Ultra High-Res' },
+  
+  // Global models (7-16 days)
+  'best_match': { days: 16, category: 'Global Extended' },
+  'icon_seamless': { days: 7, category: 'Global' },
+  'icon_eu': { days: 7, category: 'Global' },
+  'gfs025': { days: 16, category: 'Global Extended' },
+  'ecmwf_ifs025': { days: 10, category: 'Global Medium' },
+  'arpege_europe': { days: 4, category: 'Regional' },
+  
+  // Default for unknown models
+  'default': { days: 7, category: 'Global' }
+};
+
+// Function to get enhanced model label
+function getEnhancedModelLabel(model) {
+  const baseModel = model.model.replace('_ensemble', '').replace('_det', '');
+  const info = MODEL_INFO[baseModel] || MODEL_INFO['default'];
+  const typeIcon = model.type === 'ensemble' ? '📊' : '';
+  
+  return `${model.label} ${typeIcon} (${info.days}d, ${info.category})`;
+}
 const models = [
   { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },
   { id: "icon_d2_det", label: "🇩🇪 ICON D2 48h", model: "icon_d2", type: "deterministic" },
@@ -227,11 +258,11 @@ if (urlLocation) {
   locSelect.selectedIndex = 0;
 }
 
-// Populate Model Dropdown
+// Populate Model Dropdown with enhanced labels
 models.forEach(m => {
   const opt = document.createElement("option");
   opt.value = m.id;
-  opt.textContent = m.label;
+  opt.textContent = getEnhancedModelLabel(m);
   modSelect.appendChild(opt);
 });
 

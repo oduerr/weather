@@ -73,6 +73,20 @@ window.VisRegistry = {
     // Use the dedicated Overview Panel module
     window.OverviewPanel.render(data, location, model, config);
   },
+  
+  /**
+   * Overview Table panel visualizer
+   * Renders a table view with dates as rows and time periods as columns
+   */
+  overviewTable: function(data, location, model, config = {}) {
+    if (!window.OverviewTable || !window.OverviewTable.render) {
+      console.error('OverviewTable module not available');
+      return;
+    }
+    
+    // Use the dedicated Overview Table module
+    window.OverviewTable.render(data, location, model, config);
+  },
 
   /**
    * Actuals panel visualizer

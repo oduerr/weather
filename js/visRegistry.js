@@ -61,6 +61,20 @@ window.VisRegistry = {
   },
 
   /**
+   * Overview panel visualizer
+   * Renders a compact daily overview with morning/midday/evening slices
+   */
+  overview: function(data, location, model, config = {}) {
+    if (!window.OverviewPanel || !window.OverviewPanel.render) {
+      console.error('OverviewPanel module not available');
+      return;
+    }
+    
+    // Use the dedicated Overview Panel module
+    window.OverviewPanel.render(data, location, model, config);
+  },
+
+  /**
    * Actuals panel visualizer
    * Renders a numbers-only view comparing Observed (Station), Observed (BrightSky), and Forecast (Model)
    */
@@ -215,7 +229,8 @@ window.VisRegistry = {
     container.appendChild(table);
 
     plot.appendChild(container);
-  }
+  },
+
 };
 
 /**

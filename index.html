@@ -235,6 +235,7 @@
         <label for="panelSelect">📊</label>
         <select id="panelSelect">
           <option value="temperature">🌡️ Temperature</option>
+          <option value="overview">📅 Overview</option>
           <option value="uv_wind">☀️ UV & Wind</option>
           <option value="actuals">📍 Actuals</option>
         </select>
@@ -266,9 +267,11 @@
   <!-- 🔹 Fullscreen Plotly Chart -->
   <div id="plot"></div>
 
+  <script src="./js/weatherIcons.js"></script>
   <script src="./js/api.js"></script>
   <script src="./js/plot.js"></script>
   <script src="./js/visRegistry.js"></script>
+  <script src="./js/overviewPanel.js"></script>
   <script src="./js/locationPicker.js"></script>
   <script src="./js/locationSearch.js"></script>
   <script src="./js/swipeNavigation.js"></script>

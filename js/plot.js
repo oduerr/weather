@@ -144,17 +144,10 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const visibility = (hourly.visibility || []).map(v => v / 1000);
   const weatherCode = hourly.weather_code || [];
 
-  // Weather icons mapping
-  const weatherIconMap = {
-    "0": "☀️", "1": "🌤️", "2": "⛅", "3": "☁️",
-    "45": "🌫️", "48": "🌫️", "51": "🌦️", "53": "🌦️",
-    "55": "🌦️", "56": "🌧️", "57": "🌧️", "61": "🌧️",
-    "63": "🌧️", "65": "🌧️", "66": "🌧️", "67": "🌧️",
-    "71": "🌨️", "73": "🌨️", "75": "🌨️", "77": "❄️",
-    "80": "🌦️", "81": "🌦️", "82": "🌧️", "85": "🌨️",
-    "86": "🌨️", "95": "⛈️", "96": "⛈️", "99": "⛈️"
-  };
-  const weatherIcons = weatherCode.map(code => weatherIconMap[code] || "");
+  // Weather icons using centralized mapping
+  const weatherIcons = window.WeatherIcons ? 
+    window.WeatherIcons.getIcons(weatherCode) : 
+    weatherCode.map(() => "❓");
 
   // Calculate synchronized range for temperature and dew point axes
   let tempDewRange = {};
@@ -289,7 +282,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   let traceWeatherCodeEnsemble = [];
   if (model.type === "ensemble" && hourly.weather_code) {
     const weatherCodeMode = window.WeatherPlot.calculateEnsembleMode(hourly, "weather_code");
-    const weatherCodeModeIcons = weatherCodeMode.map(code => weatherIconMap[code] || "");
+    const weatherCodeModeIcons = window.WeatherIcons ? 
+      window.WeatherIcons.getIcons(weatherCodeMode) : 
+      weatherCodeMode.map(() => "❓");
     
     traceWeatherCodeEnsemble = [{
       x: timesLocal,

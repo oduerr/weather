@@ -1,6 +1,7 @@
 let measured_temp = null;
 let measured_water_temp = null;
 
+
 // ------------------------------
 // 1) Configuration and Panel System
 // ------------------------------
@@ -10,7 +11,7 @@ let measured_water_temp = null;
 // import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
 
 // For now, we'll define the configuration inline to maintain file:// compatibility
-const PANELS = ['temperature', 'uv_wind', 'actuals'];
+const PANELS = ['temperature', 'overview', 'uv_wind', 'actuals'];
 const PANEL_CONFIG = {
   temperature: {
     enabled: true,
@@ -19,6 +20,14 @@ const PANEL_CONFIG = {
     defaultView: '2d',
     showEnsemble: true,
     showCurrent: true
+  },
+  overview: {
+    enabled: true,
+    title: 'Overview',
+    description: 'Daily overview with morning/midday/evening slices',
+    defaultView: '5d',
+    showEnsemble: true,
+    showCurrent: false
   },
   uv_wind: {
     enabled: true,
@@ -237,11 +246,15 @@ if (urlParams.model && models.find(m => m.id === urlParams.model)) {
 // Set panel from URL or default
 const panelSelect = document.getElementById('panelSelect');
 if (urlParams.panel && panelSelect) {
-  const validPanels = ['temperature', 'uv_wind', 'actuals'];
+  const validPanels = ['temperature', 'overview', 'uv_wind', 'actuals'];
   if (validPanels.includes(urlParams.panel)) {
     panelSelect.value = urlParams.panel;
     console.log("Set panel from URL:", urlParams.panel);
   }
+} else if (panelSelect) {
+  // Set Overview as default panel when no panel is specified in URL
+  panelSelect.value = 'overview';
+  console.log("Set default panel to: overview");
 }
 
 // ------------------------------
@@ -322,7 +335,7 @@ window.fetchAndPlot = async function fetchAndPlot() {
     
     // Get the selected panel from the dropdown
     const panelSelect = document.getElementById('panelSelect');
-    const selectedPanel = panelSelect ? panelSelect.value : 'temperature';
+    const selectedPanel = panelSelect ? panelSelect.value : 'overview';
     
     // Render only the selected panel
     const panelConfig = PANEL_CONFIG[selectedPanel];
@@ -350,7 +363,7 @@ window.fetchAndPlot = async function fetchAndPlot() {
 // ------------------------------
 // 4) Process Data & Plot (Using Plotly.js)
 // ------------------------------
-async function processWeatherData(data, selectedLoc, model, selectedPanel = 'temperature') {
+async function processWeatherData(data, selectedLoc, model, selectedPanel = 'overview') {
   // Use the plot module to render the weather data
   await window.WeatherPlot.renderWeatherData(data, selectedLoc, model, selectedPanel);
 } // End of processWeatherData

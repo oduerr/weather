@@ -366,3 +366,82 @@ Desired Behavior:
   - Swiping to the left or to the right should move forward of 1.5 times the current range of the x-axis. Since there are plotly graphs, be sure that you swipes are only counting if you are not in the area of the plotly graphs. So if you are above or below this gesture should work. Alternatively, it should also work when you press the left and right key. 
   - Keep the changes minimal to the existing code. In doubt, add a new component.
   -  
+
+### Task 7: Feature Request 6  Add "Overview" Panel (with Ensemble Uncertainty)
+
+**Goal**
+Provide a compact at-a-glance daily view (morning / midday / evening) showing icon, temperature, rain probability, and—if an ensemble is selected—uncertainty and consensus.
+
+### Task: Add "Overview" Panel (with Ensemble Uncertainty and Daily Min/Max)
+
+**Goal**
+Provide a compact at-a-glance daily view (morning / midday / evening) showing icon, temperature, rain probability, and—if an ensemble is selected—uncertainty and consensus. Each day also shows the daily minimum and maximum temperature.
+
+---
+
+
+#### 1) UI integration
+- Add `"Overview"` to `#panelSelect`, **after "Temperature" and before "UV/Wind"**.
+- Respect `panel=overview` in the URL param system (update on change; deep-linkable).
+
+#### 2) Layout & content
+- One **card/row per forecast day** (today → end of model horizon).
+- For each day show:
+  - **Daily minimum and maximum temperatures**:
+    - Deterministic: single values (`Min 8 °C / Max 17 °C`).
+    - Ensemble: mean ± 1 SD (`Min 8 ± 1 °C / Max 17 ± 2 °C`).
+    - Position: at the **top** of the day card, before the time slices.
+  - **Three time slices**:
+    - Morning ≈ 06:00
+    - Midday ≈ 12:00
+    - Evening ≈ 21:00
+    - For each slice display:
+      1) **Weather symbol** (existing icon set).
+      2) **Temperature (°C)**  
+         - Deterministic: round to nearest integer.  
+         - Ensemble: **mean ± 1 SD**. *(Use SD, not SE.)*
+      3) **Rain probability (%)**
+         - Deterministic: direct model output if available; else derive as in Rain panel.
+         - Ensemble: mean of member probabilities if available; else proportion of members above threshold (e.g., >0.1 mm).  
+      4) **Ensemble consensus badge** (only for ensembles): majority symbol with agreement count, e.g. ☀️ `14/20`.
+
+#### 3) Deterministic vs ensemble behavior
+- Deterministic: temp values only; no ±SD, no consensus badge.
+- Ensemble: temp values as mean ± SD; consensus badge shown.
+
+#### 4) Data selection rules
+- Slice hours: nearest forecast step to 06/12/21, tolerance ±2h. If none, show `—`.
+- Daily min/max:
+  - Deterministic: min/max across the day from model values.
+  - Ensemble: mean of member min/max values, plus SD across members.
+
+#### 5) Styling (compact & readable)
+- Grid/table that **fits 3–4 days on mobile without scrolling**.
+- Hierarchy:
+  - Min/Max line in smaller text at top of card.
+  - Slice rows with large icon, temp ± SD, rain prob, consensus badge.
+- Touch targets ≥44px; no Plotly in this panel.
+
+#### 6) Extensibility hooks
+- Implement `OverviewPanel.render(data, location, model, config)` and register via `VisRegistry`.
+- Provide helper: `formatOverviewSlice()` returning `{ icon, tempMean, tempSD?, rainProb, consensusCount?, consensusTotal? }`.
+- Place constants (`sliceHours`, precipThreshold) in `OVERVIEW_CONFIG`.
+
+#### 7) URL/state
+- Ensure `panel=overview` round-trips via `updateUrlWithAppState()` and `popstate`.
+- Respect `view` buttons (1d/2d/5d/all) to limit days shown.
+
+## 8) Acceptance criteria
+- "Overview" appears in the dropdown between Temperature and UV/Wind.
+- Each day shows:
+  - Daily Min/Max line at the top.
+  - Three slices (06/12/21) with icon, temp (±SD if ensemble), rain prob, and consensus badge (if ensemble).
+- Ensemble-only features (±SD, consensus) are hidden for deterministic models.
+- Layout is compact, mobile-friendly, and consistent with existing style.
+
+
+## Task 7 Polishinh
+- The current day is twice shown (screenshot)
+- Irrespective of the setting the maximum of possible days should be shown.
+- If in ensemble mode the the daily maximum is the maximum average of the ensemble members +- 1 sd
+- Make this panel the default panel when the user opens the app and no panel is selected via the url parameter.

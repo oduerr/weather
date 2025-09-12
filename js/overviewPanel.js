@@ -51,7 +51,7 @@ window.OverviewPanel = {
     const futureDays = this.filterFutureDays(uniqueDays);
 
     // Render the overview
-    this.renderOverviewLayout(plot, futureDays, isEnsemble, model.label);
+    this.renderOverviewLayout(plot, futureDays, isEnsemble, model.label, location, forecast);
   },
 
   /**
@@ -234,7 +234,7 @@ window.OverviewPanel = {
    * @param {boolean} isEnsemble - Whether this is ensemble data
    * @param {string} modelLabel - Model label for header
    */
-  renderOverviewLayout: function(plot, days, isEnsemble, modelLabel) {
+  renderOverviewLayout: function(plot, days, isEnsemble, modelLabel, location, forecast) {
     const container = document.createElement('div');
     container.style.cssText = `
       padding: 16px;
@@ -259,7 +259,17 @@ window.OverviewPanel = {
       padding: 10px 0;
       z-index: 10;
     `;
-    header.textContent = `Weather Overview - ${modelLabel} (${days.length} days)`;
+    // Create location info line
+    const locationInfo = this.formatLocationInfo(location, forecast);
+    
+    header.innerHTML = `
+      <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">
+        Weather Overview - ${modelLabel} (${days.length} days)
+      </div>
+      <div style="font-size: 12px; color: #666; font-weight: normal;">
+        ${locationInfo}
+      </div>
+    `;
     container.appendChild(header);
 
     // Days container - now scrollable
@@ -384,5 +394,39 @@ window.OverviewPanel = {
     });
 
     return card;
+  },
+
+  /**
+   * Format location information similar to the reference image
+   * @param {Object} location - Location object with lat, lon, name
+   * @param {Object} forecast - Forecast data with elevation and daily sunrise/sunset
+   * @returns {string} Formatted location info string
+   */
+  formatLocationInfo: function(location, forecast) {
+    const lat = location.lat.toFixed(2);
+    const lon = location.lon.toFixed(2);
+    const elevation = forecast && forecast.elevation ? `⛰️ ${forecast.elevation}m` : '';
+    
+    // Get today's sunrise and sunset
+    let sunInfo = '';
+    if (forecast && forecast.daily && forecast.daily.sunrise && forecast.daily.sunset) {
+      const sunrise = forecast.daily.sunrise[0];
+      const sunset = forecast.daily.sunset[0];
+      
+      if (sunrise && sunset) {
+        const sunriseTime = new Date(sunrise).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const sunsetTime = new Date(sunset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        sunInfo = `☀️ ${sunriseTime} AM – 🌙 ${sunsetTime} PM`;
+      }
+    }
+    
+    // Combine all info parts
+    const parts = [
+      `📍 ${lat}°N, ${lon}°E`,
+      elevation,
+      sunInfo
+    ].filter(part => part.length > 0);
+    
+    return parts.join(' | ');
   }
 };

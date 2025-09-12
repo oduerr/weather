@@ -444,38 +444,10 @@ window.WeatherAPI.getForecastData = async function(location, model) {
 
   const dailyVars = ["sunrise", "sunset"];
 
-  // Define model-specific forecast day limits
-  const MODEL_FORECAST_LIMITS = {
-    // Local high-resolution models (2-5 days)
-    'icon_d2': 2,                    // ICON D2 48h - 2 days (48 hours)
-    'arome_france': 2,                // AROME France - 42 hours
-    'meteoswiss_icon_ch1': 2,        // MeteoSwiss ICON CH1 - 33 hours
-    'meteoswiss_icon_ch2': 5,        // MeteoSwiss ICON CH2 - 120 hours
-    'knmi_harmonie_arome_europe': 2, // Harmonie AROME - 48 hours
-    'dmi_harmonie_arome_europe': 2,  // Harmonie AROME - 48 hours
-    
-    // Global models (7-16 days)
-    'best_match': 16,                // Best Match - up to 16 days
-    'icon_seamless': 7,               // ICON Seamless - 7 days
-    'icon_eu': 7,                     // ICON EU - 7 days
-    'gfs025': 16,                     // GFS - 16 days (384 hours)
-    'ecmwf_ifs025': 10,              // ECMWF - 10 days (240 hours)
-    'arpege_europe': 4,              // ARPEGE Europe - 96 hours
-    
-    // Default for unknown models
-    'default': 7
-  };
-
-  // Get forecast days based on model
-  const getForecastDays = function(modelId) {
-    // Extract base model name from model ID (remove ensemble suffix if present)
-    const baseModel = modelId.replace('_ensemble', '').replace('_det', '');
-    return MODEL_FORECAST_LIMITS[baseModel] || MODEL_FORECAST_LIMITS['default'];
-  };
-
-  // Build API URL with model-specific forecast days
-  const forecastDays = getForecastDays(model.model);
-  console.log(`📅 Requesting ${forecastDays} days forecast for model: ${model.model}`);
+  // Always request maximum possible days (16) and use whatever data we get back
+  // This ensures we get the maximum available data for each model
+  const maxForecastDays = 16;
+  console.log(`📅 Requesting maximum ${maxForecastDays} days forecast for model: ${model.model} (will use whatever data is returned)`);
 
   const params = new URLSearchParams({
     latitude: location.lat,
@@ -483,7 +455,7 @@ window.WeatherAPI.getForecastData = async function(location, model) {
     hourly: hourlyVars.join(","),
     "timezone": "Europe/Berlin",
     models: model.model,
-    forecast_days: forecastDays  // Model-specific forecast length
+    forecast_days: maxForecastDays  // Always request maximum, use what we get
   });
   
   // Only add daily parameters for deterministic models

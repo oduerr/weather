@@ -57,26 +57,29 @@ const locations = [
   { name: "🌲🌲 Fischbach", lat: 48.157652, lon: 8.487578 }
 ];
 
-// Model forecast limits and categories (same as in API)
+// Model information for display purposes (typical expected ranges)
+// Note: API always requests 16 days and uses whatever data is returned
 const MODEL_INFO = {
-  // Local high-resolution models (2-5 days)
-  'icon_d2': { days: 2, category: 'Ultra High-Res' },  // ICON D2 48h = 2 days
-  'arome_france': { days: 2, category: 'Ultra High-Res' },
-  'meteoswiss_icon_ch1': { days: 2, category: 'Ultra High-Res' },
-  'meteoswiss_icon_ch2': { days: 5, category: 'Regional' },
-  'knmi_harmonie_arome_europe': { days: 2, category: 'Ultra High-Res' },
-  'dmi_harmonie_arome_europe': { days: 2, category: 'Ultra High-Res' },
+  // Ultra high-resolution models (typically 1-3 days)
+  'icon_d2': { days: '~2', category: 'Ultra High-Res' },  // ICON D2 48h
+  'arome_france': { days: '~2', category: 'Ultra High-Res' },  // AROME 42h
+  'meteoswiss_icon_ch1': { days: '~1', category: 'Ultra High-Res' },  // MeteoSwiss CH1 33h
+  'knmi_harmonie_arome_europe': { days: '~2', category: 'Ultra High-Res' },  // Harmonie 48h
+  'dmi_harmonie_arome_europe': { days: '~2', category: 'Ultra High-Res' },  // Harmonie 48h
   
-  // Global models (7-16 days)
-  'best_match': { days: 16, category: 'Global Extended' },
-  'icon_seamless': { days: 7, category: 'Global' },
-  'icon_eu': { days: 7, category: 'Global' },
-  'gfs025': { days: 16, category: 'Global Extended' },
-  'ecmwf_ifs025': { days: 10, category: 'Global Medium' },
-  'arpege_europe': { days: 4, category: 'Regional' },
+  // Regional models (typically 3-5 days)
+  'meteoswiss_icon_ch2': { days: '~5', category: 'Regional' },  // MeteoSwiss CH2 120h
+  'arpege_europe': { days: '~4', category: 'Regional' },  // ARPEGE 96h
+  
+  // Global models (typically 7+ days)
+  'best_match': { days: '16', category: 'Global' },  // Best Match
+  'icon_seamless': { days: '~7', category: 'Global' },  // ICON Seamless
+  'icon_eu': { days: '~7', category: 'Global' },  // ICON EU
+  'gfs025': { days: '10+', category: 'Global Extended' },  // GFS
+  'ecmwf_ifs025': { days: '10+', category: 'Global Extended' },  // ECMWF
   
   // Default for unknown models
-  'default': { days: 7, category: 'Global' }
+  'default': { days: '16d', category: 'Global' }
 };
 
 // Function to get enhanced model label

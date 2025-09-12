@@ -442,6 +442,17 @@ Provide a compact at-a-glance daily view (morning / midday / evening) showing ic
 
 ## Task 7 Polishinh
 - The current day is twice shown (screenshot)
+- Fix trace log
+plotly-2.27.0.min.js:8 Uncaught TypeError: Cannot read properties of undefined (reading '_guiEditing')
+X @ plotly-2.27.0.min.js:8
+H @ plotly-2.27.0.min.js:8
+(anonymous) @ main.js:625Understand this error
+plotly-2.27.0.min.js:8 Uncaught TypeError: Cannot read properties of undefined (reading '_guiEditing')
+X @ plotly-2.27.0.min.js:8
+H @ plotly-2.27.0.min.js:8
+(anonymous) @ plot.js:498
+(anonymous) @ main.js:613Understand this error
+2plotly-2.27.0.min.js:8 Uncaught TypeError: Cannot read properties of undefined (reading '_guiEditing')
 - Irrespective of the setting the maximum of possible days should be shown.
 - If in ensemble mode the the daily maximum is the maximum average of the ensemble members +- 1 sd
 - Make this panel the default panel when the user opens the app and no panel is selected via the url parameter.

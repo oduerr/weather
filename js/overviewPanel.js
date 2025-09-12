@@ -11,7 +11,7 @@ window.OverviewPanel = {
   config: {
     sliceHours: [6, 12, 21], // Morning, Midday, Evening
     precipThreshold: 0.1, // mm threshold for rain probability
-    maxDaysToShow: 10 // Allow more days with scrolling
+    maxDaysToShow: 16 // Allow up to 16 days with scrolling (model-dependent)
   },
 
   /**
@@ -259,7 +259,7 @@ window.OverviewPanel = {
       padding: 10px 0;
       z-index: 10;
     `;
-    header.textContent = `Weather Overview - ${modelLabel}`;
+    header.textContent = `Weather Overview - ${modelLabel} (${days.length} days)`;
     container.appendChild(header);
 
     // Days container - now scrollable

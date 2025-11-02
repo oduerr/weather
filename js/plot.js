@@ -297,22 +297,54 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     }];
   }
 
-  // Night shading: create rectangles for each night period
+  // Night shading: create rectangles for each night period (clipped to available data range)
   const nightShading = [];
-  if (sunrises.length > 0 && sunsets.length > 0) {
-    for (let i = 0; i < sunrises.length - 1; i++) {
-      // Define the night period as the time between sunset[i] and sunrise[i+1]
+  const dataStartDate = new Date(startTime);
+  const dataEndDate = new Date(endTime);
+  const hasValidRange = !Number.isNaN(dataStartDate.getTime()) && !Number.isNaN(dataEndDate.getTime());
+
+  if (hasValidRange) {
+    const addNightSegment = (segmentStart, segmentEnd) => {
+      if (!segmentStart || !segmentEnd) return;
+      const startDate = segmentStart instanceof Date ? segmentStart : new Date(segmentStart);
+      const endDate = segmentEnd instanceof Date ? segmentEnd : new Date(segmentEnd);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return;
+
+      const clippedStart = new Date(Math.max(startDate.getTime(), dataStartDate.getTime()));
+      const clippedEnd = new Date(Math.min(endDate.getTime(), dataEndDate.getTime()));
+      if (clippedEnd <= clippedStart) return;
+
       nightShading.push({
         type: "rect",
         xref: "x",
         yref: "paper",
-        x0: sunsets[i],   // Start of the night (sunset)
-        x1: sunrises[i + 1], // End of the night (next sunrise)
-        y0: 0, y1: 1,  // Full height (paper coordinates from 0 to 1)
+        x0: clippedStart,
+        x1: clippedEnd,
+        y0: 0,
+        y1: 1,
         fillcolor: "rgba(0, 0, 0, 0.08)", // Semi-transparent black for night shading
         layer: "below",
         line: { width: 0 }
       });
+    };
+
+    if (sunrises.length > 0 && dataStartDate < sunrises[0]) {
+      // Handle the case where the visible range starts during an ongoing night
+      addNightSegment(dataStartDate, sunrises[0]);
+    }
+
+    const pairedCount = Math.min(sunsets.length, Math.max(0, sunrises.length - 1));
+    for (let i = 0; i < pairedCount; i++) {
+      // Standard night period between sunset[i] and sunrise[i + 1]
+      addNightSegment(sunsets[i], sunrises[i + 1]);
+    }
+
+    if (sunsets.length > pairedCount) {
+      // If we have an extra sunset without a matching next sunrise, extend shading to the end of the data
+      addNightSegment(sunsets[sunsets.length - 1], dataEndDate);
+    } else if (pairedCount > 0 && !sunrises[pairedCount]) {
+      // When the last paired sunset does not have a subsequent sunrise within the forecast window
+      addNightSegment(sunsets[pairedCount - 1], dataEndDate);
     }
   }
 

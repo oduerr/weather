@@ -63,6 +63,11 @@ https://oduerr.github.io/weather/?lat=60.2055&lon=24.6559&name=Helsinki&model=ec
 
 ### Quick Location Links
 
+#### Skiing
+* **Berghaus_Malbun** https://oduerr.github.io/weather/?lat=47.1458&lon=9.4350&name=Berghaus_Malbun&model=meteoswiss_icon_ch1&panel=temperature
+* **Rosswiess** https://oduerr.github.io/weather/?lat=47.1333&lon=9.3858&name=Rosswies&model=meteoswiss_icon_ch1&panel=temperature
+
+
 * **Berlin**: https://oduerr.github.io/weather/?lat=52.5200&lon=13.4050&name=Berlin
 * **Zurich**: https://oduerr.github.io/weather/?lat=47.3769&lon=8.5417&name=Zurich&model=meteoswiss_icon_ch1&panel=temperature
 * **Helsinki**: https://oduerr.github.io/weather/?lat=60.2055&lon=24.6559&name=Helsinki&model=ecmwf_ensemble_1

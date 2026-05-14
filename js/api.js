@@ -398,6 +398,120 @@ window.WeatherAPI.fetchKonstanzWeather = function(callback) {
       });
 }
 
+// ---- Google Weather API ----
+
+const GOOGLE_CONDITION_TO_WMO = {
+  'CLEAR': 0, 'MOSTLY_CLEAR': 1, 'PARTLY_CLOUDY': 2, 'MOSTLY_CLOUDY': 3,
+  'CLOUDY': 3, 'HAZE': 3, 'WINDY': 3, 'FOGGY': 45, 'FOG': 45,
+  'LIGHT_RAIN': 61, 'RAIN': 63, 'HEAVY_RAIN': 65,
+  'RAIN_SHOWERS': 80, 'LIGHT_RAIN_SHOWERS': 80,
+  'LIGHT_SNOW': 71, 'SNOW': 73, 'HEAVY_SNOW': 75,
+  'SNOW_SHOWERS': 85, 'BLOWING_SNOW': 75,
+  'FREEZING_RAIN': 66, 'SLEET': 68,
+  'THUNDERSTORM': 95, 'THUNDERSTORM_WITH_RAIN': 95, 'HEAVY_THUNDERSTORM': 99,
+};
+
+window.WeatherAPI.fetchGoogleForecast = async function(location) {
+  const key = localStorage.getItem('googleApiKey');
+  if (!key) throw new Error('No Google API key. Open ⚙️ Settings to add one.');
+  const baseParams = {
+    'key': key,
+    'location.latitude': location.lat,
+    'location.longitude': location.lon,
+    'hours': 240,
+    'pageSize': 24   // API max is 24; paginate to get all 240 hours
+  };
+  const allHours = [];
+  let pageToken = null;
+  let timeZone = null;
+  let pages = 0;
+  do {
+    const params = new URLSearchParams(baseParams);
+    if (pageToken) params.set('pageToken', pageToken);
+    const response = await fetch(`https://weather.googleapis.com/v1/forecast/hours:lookup?${params}`);
+    if (!response.ok) throw new Error(`Google API ${response.status}: ${await response.text()}`);
+    const data = await response.json();
+    allHours.push(...(data.forecastHours || []));
+    if (!timeZone) timeZone = data.timeZone;
+    pageToken = data.nextPageToken || null;
+    pages++;
+  } while (pageToken && pages < 11);
+  console.log(`✅ Google forecast: ${allHours.length} hours fetched (${pages} pages)`);
+  return { forecastHours: allHours, timeZone };
+};
+
+window.WeatherAPI.adaptGoogleToOpenMeteo = function(googleData, sunsetData) {
+  const hours = googleData.forecastHours || [];
+  const tz = googleData.timeZone?.id || 'Europe/Berlin';
+  const times = hours.map(h => {
+    const d = new Date(h.interval.startTime);
+    const parts = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    }).formatToParts(d);
+    const get = type => parts.find(p => p.type === type)?.value;
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+  });
+  return {
+    hourly: {
+      time:                      times,
+      temperature_2m:            hours.map(h => h.temperature?.degrees ?? null),
+      relative_humidity_2m:      hours.map(h => h.relativeHumidity ?? null),
+      dew_point_2m:              hours.map(h => h.dewPoint?.degrees ?? null),
+      precipitation:             hours.map(h => h.precipitation?.qpf?.quantity ?? 0),
+      precipitation_probability: hours.map(h => h.precipitation?.probability?.percent ?? null),
+      weather_code:              hours.map(h => GOOGLE_CONDITION_TO_WMO[h.weatherCondition?.type] ?? 0),
+      cloud_cover:               hours.map(h => h.cloudCover ?? null),
+      cloud_cover_low:           hours.map(() => null),
+      cloud_cover_mid:           hours.map(() => null),
+      cloud_cover_high:          hours.map(() => null),
+      visibility:                hours.map(h => h.visibility?.distance != null ? h.visibility.distance * 1000 : null),
+      sunshine_duration:         hours.map(() => null),
+      uv_index:                  hours.map(h => h.uvIndex ?? null),
+      uv_index_clear_sky:        hours.map(() => null),
+      wind_speed_10m:            hours.map(h => h.wind?.speed?.value ?? null),
+      wind_direction_10m:        hours.map(h => h.wind?.direction?.degrees ?? null),
+      wind_gusts_10m:            hours.map(h => h.wind?.gust?.value ?? null),
+    },
+    daily: sunsetData?.daily || { time: [], sunrise: [], sunset: [] },
+    timezone: tz,
+    timezone_abbreviation: tz,
+  };
+};
+
+window.WeatherAPI.getGoogleForecastData = async function(location) {
+  const cacheKey = `${location.lat},${location.lon},google_metnet`;
+  const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+  if (cache[cacheKey] && Date.now() - cache[cacheKey].timestamp < CACHE_EXPIRATION_MS) {
+    console.log('✅ Using cached Google forecast for', location.name);
+    return cache[cacheKey].data;
+  }
+  const [googleData, sunsetResp] = await Promise.all([
+    window.WeatherAPI.fetchGoogleForecast(location),
+    fetch('https://api.open-meteo.com/v1/forecast?' + new URLSearchParams({
+      latitude: location.lat, longitude: location.lon,
+      daily: 'sunrise,sunset', timezone: 'Europe/Berlin', forecast_days: 16
+    }))
+  ]);
+  const sunsetData = sunsetResp.ok ? await sunsetResp.json() : null;
+  const adapted = window.WeatherAPI.adaptGoogleToOpenMeteo(googleData, sunsetData);
+  cache[cacheKey] = {
+    data: adapted,
+    timestamp: Date.now(),
+    fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+  localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  return adapted;
+};
+
+window.WeatherAPI.getGoogleFetchTime = function(location) {
+  const cacheKey = `${location.lat},${location.lon},google_metnet`;
+  const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+  return cache[cacheKey]?.fetchedAt || null;
+};
+
+// ---- End Google Weather API ----
+
 /**
  * Get forecast data from Open-Meteo API with caching
  * @param {Object} location - Location object with lat, lon, name
@@ -405,6 +519,9 @@ window.WeatherAPI.fetchKonstanzWeather = function(callback) {
  * @returns {Promise<Object>} Forecast data object
  */
 window.WeatherAPI.getForecastData = async function(location, model) {
+  if (model.id === 'google_metnet') {
+    return await window.WeatherAPI.getGoogleForecastData(location);
+  }
   // Check cache first
   const cacheKey = `${location.lat},${location.lon},${model.id}`;
   const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");

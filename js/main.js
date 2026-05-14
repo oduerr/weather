@@ -79,6 +79,9 @@ const MODEL_INFO = {
   'meteoswiss_icon_ch2': { days: '~5', category: 'Regional' },  // MeteoSwiss CH2 120h
   'arpege_europe': { days: '~4', category: 'Regional' },  // ARPEGE 96h
   
+  // Google MetNet
+  'google_metnet': { days: '10', category: 'Google MetNet' },
+
   // Global models (typically 7+ days)
   'best_match': { days: '16', category: 'Global' },  // Best Match
   'icon_seamless': { days: '~7', category: 'Global' },  // ICON Seamless
@@ -99,6 +102,7 @@ function getEnhancedModelLabel(model) {
   return `${model.label} ${typeIcon} (${info.days}d, ${info.category})`;
 }
 const models = [
+  { id: "google_metnet", label: "🔵 Google MetNet", model: "google_metnet", type: "deterministic" },
   { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },
   { id: "icon_d2_det", label: "🇩🇪 ICON D2 48h", model: "icon_d2", type: "deterministic" },
   { id: "icon_seamless_det", label: "🇩🇪 Seamless", model: "icon_seamless", type: "deterministic" },
@@ -269,13 +273,31 @@ if (urlLocation) {
   locSelect.selectedIndex = 0;
 }
 
-// Populate Model Dropdown with enhanced labels
-models.forEach(m => {
-  const opt = document.createElement("option");
-  opt.value = m.id;
-  opt.textContent = getEnhancedModelLabel(m);
-  modSelect.appendChild(opt);
-});
+// Populate Model Dropdown with enhanced labels (Google MetNet only shown when key is set)
+function populateModelDropdown() {
+  const hasGoogleKey = !!localStorage.getItem('googleApiKey');
+  modSelect.innerHTML = '';
+  models.forEach(m => {
+    if (m.id === 'google_metnet' && !hasGoogleKey) return;
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = getEnhancedModelLabel(m);
+    modSelect.appendChild(opt);
+  });
+}
+populateModelDropdown();
+
+function updateGoogleFetchTimeDisplay(location) {
+  const span = document.getElementById('googleFetchTime');
+  if (!span) return;
+  if (modSelect.value === 'google_metnet' && location && window.WeatherAPI.getGoogleFetchTime) {
+    const t = window.WeatherAPI.getGoogleFetchTime(location);
+    span.textContent = t ? `↻ ${t}` : '';
+    span.style.display = t ? '' : 'none';
+  } else {
+    span.style.display = 'none';
+  }
+}
 
 // Set model from URL or default
 if (urlParams.model && models.find(m => m.id === urlParams.model)) {
@@ -396,6 +418,7 @@ window.fetchAndPlot = async function fetchAndPlot() {
     }
     
     // Data updated successfully (status element removed to save space)
+    updateGoogleFetchTimeDisplay(selectedLoc);
   } catch (err) {
     console.error("Error fetching data:", err);
     // Error status removed to save space - check console for errors
@@ -561,6 +584,30 @@ function restoreViewFromUrl(view) {
   }
 }
 
+// Settings modal — registered directly on DOMContentLoaded (no setTimeout delay)
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('settingsBtn').addEventListener('click', function() {
+    document.getElementById('googleApiKeyInput').value = localStorage.getItem('googleApiKey') || '';
+    document.getElementById('settingsModal').style.display = 'flex';
+  });
+  document.getElementById('settingsCancelBtn').addEventListener('click', function() {
+    document.getElementById('settingsModal').style.display = 'none';
+  });
+  document.getElementById('settingsSaveBtn').addEventListener('click', function() {
+    const key = document.getElementById('googleApiKeyInput').value.trim();
+    const prevModel = modSelect.value;
+    if (key) {
+      localStorage.setItem('googleApiKey', key);
+    } else {
+      localStorage.removeItem('googleApiKey');
+    }
+    document.getElementById('settingsModal').style.display = 'none';
+    populateModelDropdown();
+    const optionExists = Array.from(modSelect.options).some(o => o.value === prevModel);
+    modSelect.value = optionExists ? prevModel : (modSelect.options[0]?.value || '');
+  });
+});
+
 // Initialize the plot with default selections after API is loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Wait a bit to ensure API is loaded
@@ -635,6 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       window.fetchAndPlot();
     });
+
   }, 100);
 });
 

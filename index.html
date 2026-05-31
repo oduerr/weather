@@ -290,18 +290,22 @@
   <div id="settingsModal" style="display:none; position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:12px; padding:24px; width:340px; max-width:90vw; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
       <h3 style="margin:0 0 16px; font-size:16px;">⚙️ Settings</h3>
-      <label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600;">Google Maps API Key</label>
-      <p style="margin:0 0 8px; font-size:12px; color:#666;">Enables the 🔵 Google MetNet model (10-day, MetNet-powered). Get a key at <a href="https://developers.google.com/maps/documentation/weather/get-api-key" target="_blank">Google Maps Platform</a>.</p>
-      <input
-        id="googleApiKeyInput"
-        type="password"
-        placeholder="AIza..."
-        style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; margin-bottom:16px; font-family:monospace;"
-      />
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button id="settingsCancelBtn" style="padding:8px 16px; border-radius:8px; border:1px solid #ddd; background:white; cursor:pointer; font-size:14px;">Cancel</button>
-        <button id="settingsSaveBtn" style="padding:8px 16px; border-radius:8px; border:none; background:#007AFF; color:white; cursor:pointer; font-size:14px; font-weight:600;">Save</button>
-      </div>
+      <form id="settingsForm" autocomplete="on" onsubmit="return false;">
+        <label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600;">Google Maps API Key</label>
+        <p style="margin:0 0 8px; font-size:12px; color:#666;">Enables the 🔵 Google MetNet model (10-day, MetNet-powered). Get a key at <a href="https://developers.google.com/maps/documentation/weather/get-api-key" target="_blank">Google Maps Platform</a>.</p>
+        <input
+          id="googleApiKeyInput"
+          name="googleApiKey"
+          type="password"
+          autocomplete="current-password"
+          placeholder="AIza..."
+          style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:8px; font-size:14px; box-sizing:border-box; margin-bottom:16px; font-family:monospace;"
+        />
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button id="settingsCancelBtn" type="button" style="padding:8px 16px; border-radius:8px; border:1px solid #ddd; background:white; cursor:pointer; font-size:14px;">Cancel</button>
+          <button id="settingsSaveBtn" type="submit" style="padding:8px 16px; border-radius:8px; border:none; background:#007AFF; color:white; cursor:pointer; font-size:14px; font-weight:600;">Save</button>
+        </div>
+      </form>
     </div>
   </div>
 </body>

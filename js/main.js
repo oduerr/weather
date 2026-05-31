@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('settingsCancelBtn').addEventListener('click', function() {
     document.getElementById('settingsModal').style.display = 'none';
   });
-  document.getElementById('settingsSaveBtn').addEventListener('click', function() {
+  document.getElementById('settingsForm').addEventListener('submit', function() {
     const key = document.getElementById('googleApiKeyInput').value.trim();
     const prevModel = modSelect.value;
     if (key) {

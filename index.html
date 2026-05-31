@@ -71,6 +71,7 @@
       height: 100vh; /* Full height when controls fade */
       margin-top: 0; /* No margin when controls fade */
       transition: margin-top 0.3s ease;
+      position: relative;
     }
 
     #plot.with-controls {
@@ -239,6 +240,7 @@
               <option value="temperature">🌡️ Temperature</option>
               <option value="uv_wind">☀️ UV & Wind</option>
               <option value="actuals">📍 Actuals</option>
+              <option value="compare">🔀 Compare</option>
             </select>
       </div>
     </div>
@@ -276,6 +278,7 @@
   <script src="./js/visRegistry.js"></script>
   <script src="./js/overviewPanel.js"></script>
   <script src="./js/overviewTable.js"></script>
+  <script src="./js/comparePanel.js"></script>
   <script src="./js/locationPicker.js"></script>
   <script src="./js/locationSearch.js"></script>
   <script src="./js/swipeNavigation.js"></script>

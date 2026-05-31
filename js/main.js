@@ -11,7 +11,7 @@ let measured_water_temp = null;
 // import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
 
 // For now, we'll define the configuration inline to maintain file:// compatibility
-const PANELS = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals'];
+const PANELS = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals', 'compare'];
 const PANEL_CONFIG = {
   temperature: {
     enabled: true,
@@ -49,6 +49,14 @@ const PANEL_CONFIG = {
     enabled: true,
     title: 'Actuals',
     description: 'Observed vs Forecast numeric values',
+    defaultView: '2d',
+    showEnsemble: false,
+    showCurrent: false
+  },
+  compare: {
+    enabled: true,
+    title: 'Compare',
+    description: 'Overlay multiple weather models on one chart',
     defaultView: '2d',
     showEnsemble: false,
     showCurrent: false
@@ -130,6 +138,7 @@ locations.forEach(loc => {
 });
 
 const modSelect = document.getElementById("modelSelect");
+window.allModels = models;  // exposed for ComparePanel.renderControls
 // models.forEach(m => {
 //   const opt = document.createElement("option");
 //   opt.value = m.id;  // ✅ Store `id` instead of `model`
@@ -310,7 +319,7 @@ if (urlParams.model && models.find(m => m.id === urlParams.model)) {
 // Set panel from URL or default
 const panelSelect = document.getElementById('panelSelect');
 if (urlParams.panel && panelSelect) {
-  const validPanels = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals'];
+  const validPanels = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals', 'compare'];
   if (validPanels.includes(urlParams.panel)) {
     panelSelect.value = urlParams.panel;
     console.log("Set panel from URL:", urlParams.panel);
@@ -393,7 +402,40 @@ window.fetchAndPlot = async function fetchAndPlot() {
     console.error("WeatherAPI not available");
     return;
   }
-  
+
+  // ── Compare panel: fetch multiple models in parallel, then early-return ──
+  {
+    const _panelSelect = document.getElementById('panelSelect');
+    const _panel = _panelSelect ? _panelSelect.value : 'overview';
+    if (_panel === 'compare' && window.ComparePanel) {
+      const compareModels = (window.ComparePanel.selectedModelIds || [])
+        .map(id => models.find(m => m.id === id))
+        .filter(Boolean);
+      if (compareModels.length === 0) {
+        // Render empty state with controls still visible
+        window.VisRegistry.renderPanel('compare',
+          { models: [], allData: [] }, selectedLoc, null, PANEL_CONFIG.compare || {});
+        return;
+      }
+      try {
+        const allData = await Promise.all(
+          compareModels.map(m =>
+            window.WeatherAPI.getWeatherDataWithFallback(selectedLoc, m)
+              .catch(err => { console.warn(`Compare: failed ${m.id}:`, err); return null; })
+          )
+        );
+        const validModels = compareModels.filter((_, i) => allData[i] !== null);
+        const validData   = allData.filter(Boolean);
+        window.VisRegistry.renderPanel('compare',
+          { models: validModels, allData: validData }, selectedLoc, null, PANEL_CONFIG.compare || {});
+      } catch (err) {
+        console.error('Compare panel error:', err);
+      }
+      return;
+    }
+  }
+  // ── End compare branch ──
+
   try {
     const data = await window.WeatherAPI.getWeatherDataWithFallback(selectedLoc, selectedModel);
     

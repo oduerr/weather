@@ -245,6 +245,14 @@ window.VisRegistry = {
     plot.appendChild(container);
   },
 
+  compare: function(data, location, model, config = {}) {
+    if (!window.ComparePanel || !window.ComparePanel.render) {
+      console.error('ComparePanel module not available');
+      return;
+    }
+    window.ComparePanel.render(data, location, model, config);
+  },
+
 };
 
 /**

@@ -29,6 +29,21 @@ window.SwipeNavigation = {
   },
   
   /**
+   * Get the currently active plot element
+   */
+  getActivePlotElement: function() {
+    const compareChart = document.getElementById('compare-chart');
+    if (compareChart && compareChart.classList && compareChart.classList.contains('js-plotly-plot')) {
+      return compareChart;
+    }
+    const plotDiv = document.getElementById('plot');
+    if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
+      return plotDiv;
+    }
+    return null;
+  },
+  
+  /**
    * Setup touch event listeners
    */
   setupTouchListeners: function() {
@@ -120,16 +135,13 @@ window.SwipeNavigation = {
    * Check if touch is within the Plotly plot area
    */
   isTouchInPlotArea: function(event) {
-    if (!this.plotElement) {
-      this.cacheElements();
-    }
-    
-    if (!this.plotElement) {
+    const activeEl = this.getActivePlotElement();
+    if (!activeEl) {
       return false;
     }
     
     const touch = event.touches[0];
-    const rect = this.plotElement.getBoundingClientRect();
+    const rect = activeEl.getBoundingClientRect();
     
     return (
       touch.clientX >= rect.left &&
@@ -143,13 +155,7 @@ window.SwipeNavigation = {
    * Check if we have an active Plotly plot
    */
   hasActivePlot: function() {
-    if (!this.plotElement) {
-      this.cacheElements();
-    }
-    
-    return this.plotElement && 
-           this.plotElement.classList && 
-           this.plotElement.classList.contains('js-plotly-plot');
+    return !!this.getActivePlotElement();
   },
   
   /**
@@ -186,11 +192,12 @@ window.SwipeNavigation = {
    * Get current x-axis range from Plotly
    */
   getCurrentXAxisRange: function() {
-    if (!this.plotElement || !this.plotElement.layout) {
+    const activeEl = this.getActivePlotElement();
+    if (!activeEl || !activeEl.layout) {
       return null;
     }
     
-    const layout = this.plotElement.layout || this.plotElement._fullLayout || {};
+    const layout = activeEl.layout || activeEl._fullLayout || {};
     const xaxis = layout.xaxis;
     
     if (!xaxis || !Array.isArray(xaxis.range) || xaxis.range.length !== 2) {
@@ -254,12 +261,13 @@ window.SwipeNavigation = {
    * Get data boundaries from plot element
    */
   getDataBoundaries: function() {
-    if (!this.plotElement) {
+    const activeEl = this.getActivePlotElement();
+    if (!activeEl) {
       return null;
     }
     
-    const startTime = this.plotElement.getAttribute('data-start-time');
-    const endTime = this.plotElement.getAttribute('data-end-time');
+    const startTime = activeEl.getAttribute('data-start-time');
+    const endTime = activeEl.getAttribute('data-end-time');
     
     if (!startTime || !endTime) {
       return null;
@@ -275,13 +283,14 @@ window.SwipeNavigation = {
    * Update x-axis range using Plotly
    */
   updateXAxisRange: function(newRange) {
-    if (!window.Plotly || !this.plotElement) {
+    const activeEl = this.getActivePlotElement();
+    if (!window.Plotly || !activeEl) {
       return;
     }
     
     const formatTime = (date) => date.toISOString().replace('Z', '');
     
-    Plotly.animate('plot', {
+    Plotly.animate(activeEl.id, {
       layout: {
         'xaxis.range': [formatTime(newRange.start), formatTime(newRange.end)]
       }

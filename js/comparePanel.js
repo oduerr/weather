@@ -14,9 +14,22 @@ window.ComparePanel = {
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
     '#9467bd', '#8c564b', '#e377c2', '#7f7f7f'
   ],
-  PARAM_ORDER:       ['temperature', 'rain', 'wind', 'uv'],
-  PARAM_LABELS:      { temperature: '🌡️ Temp', rain: '🌧️ Rain', wind: '💨 Wind', uv: '☀️ UV' },
-  PARAM_YAXIS_TITLE: { temperature: 'Temp (°C)', rain: 'Precip (mm)', wind: 'Wind (km/h)', uv: 'UV Index' },
+  PARAM_ORDER: [
+    'temperature', 'rain', 'rain_prob', 'wind', 'wind_dir',
+    'uv', 'humidity', 'dewpoint', 'cloud', 'visibility'
+  ],
+  PARAM_LABELS: {
+    temperature: '🌡️ Temp',  rain: '🌧️ Rain',    rain_prob: '💧 Rain %',
+    wind:        '💨 Wind',   wind_dir: '🧭 Dir',  uv: '☀️ UV',
+    humidity:    '💦 Humidity', dewpoint: '🌫️ Dew Pt',
+    cloud:       '☁️ Clouds',  visibility: '👁 Visibility',
+  },
+  PARAM_YAXIS_TITLE: {
+    temperature: 'Temp (°C)', rain: 'Precip (mm)', rain_prob: 'Rain prob (%)',
+    wind:        'Wind (km/h)', wind_dir: 'Direction (°)', uv: 'UV Index',
+    humidity:    'Humidity (%)', dewpoint: 'Dew point (°C)',
+    cloud:       'Cloud cover (%)', visibility: 'Visibility (km)',
+  },
 
   // ── Public entry point (called by VisRegistry) ──────────────────────────────
   render: function(data, location, model, config) {
@@ -70,7 +83,17 @@ window.ComparePanel = {
       responsive: true,
       displaylogo: false,
       modeBarButtonsToRemove: ['lasso2d', 'select2d']
+    }).then(() => {
+      if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
+        window.ViewportPreserver.applyIfPending();
+      }
     });
+
+    // Store time range on chartDiv so view buttons can relayout
+    if (layout.xaxis && layout.xaxis.range) {
+      chartDiv.setAttribute('data-start-time', layout.xaxis.range[0]);
+      chartDiv.setAttribute('data-end-time',   layout.xaxis.range[1]);
+    }
   },
 
   // ── Controls (model + param toggles) ────────────────────────────────────────
@@ -89,8 +112,18 @@ window.ComparePanel = {
 
     const toggleBtn = (text, active, onClick) => {
       const btn = document.createElement('button');
-      btn.className = 'view-btn' + (active ? ' active' : '');
-      btn.style.cssText = 'padding:3px 8px;font-size:12px;min-height:28px;min-width:unset;';
+      btn.className = 'compare-toggle-btn' + (active ? ' active' : '');
+      btn.style.cssText = [
+        'padding:3px 8px',
+        'font-size:12px',
+        'min-height:28px',
+        'min-width:unset',
+        'cursor:pointer',
+        'border-radius:6px',
+        'transition:all 0.15s ease',
+        active ? 'border:1px solid #007AFF; background:#007AFF; color:white; font-weight:bold;' 
+               : 'border:1px solid #ccc; background:white; color:#333;'
+      ].join(';');
       btn.textContent = text;
       btn.addEventListener('click', onClick);
       return btn;
@@ -98,6 +131,16 @@ window.ComparePanel = {
 
     // Model toggles
     controlsDiv.appendChild(label('Models:'));
+    controlsDiv.appendChild(toggleBtn('All', false, () => {
+      self.selectedModelIds = allModels
+        .filter(m => m.id !== 'google_metnet' || hasGoogleKey)
+        .map(m => m.id);
+      if (window.fetchAndPlot) window.fetchAndPlot();
+    }));
+    controlsDiv.appendChild(toggleBtn('None', false, () => {
+      self.selectedModelIds = [];
+      if (window.fetchAndPlot) window.fetchAndPlot();
+    }));
     allModels.forEach(m => {
       if (m.id === 'google_metnet' && !hasGoogleKey) return;
       controlsDiv.appendChild(toggleBtn(
@@ -119,6 +162,14 @@ window.ComparePanel = {
 
     // Parameter toggles
     controlsDiv.appendChild(label('Params:'));
+    controlsDiv.appendChild(toggleBtn('All', false, () => {
+      self.selectedParams = [...self.PARAM_ORDER];
+      if (window.fetchAndPlot) window.fetchAndPlot();
+    }));
+    controlsDiv.appendChild(toggleBtn('None', false, () => {
+      self.selectedParams = [];
+      if (window.fetchAndPlot) window.fetchAndPlot();
+    }));
     this.PARAM_ORDER.forEach(param => {
       controlsDiv.appendChild(toggleBtn(
         self.PARAM_LABELS[param],
@@ -137,7 +188,63 @@ window.ComparePanel = {
     });
   },
 
-  // ── Internals ────────────────────────────────────────────────────────────────
+  // ── View range methods (called by main.js view buttons) ─────────────────────
+
+  relayoutView: function(days) {
+    const chartDiv = document.getElementById('compare-chart');
+    if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
+    const startTime = chartDiv.getAttribute('data-start-time');
+    const endTime   = chartDiv.getAttribute('data-end-time');
+    if (!startTime || !endTime) return;
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const dataStart = new Date(startTime);
+    const dataEnd   = new Date(endTime);
+    const viewStart = new Date(Math.max(dataStart, now - msPerDay * 0.5));
+    const viewEnd   = new Date(Math.min(dataEnd, viewStart.getTime() + days * msPerDay));
+    Plotly.relayout('compare-chart', {
+      'xaxis.range': [viewStart.toISOString().replace('Z', ''), viewEnd.toISOString().replace('Z', '')]
+    });
+  },
+
+  viewAll: function() {
+    const chartDiv = document.getElementById('compare-chart');
+    if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
+    const s = chartDiv.getAttribute('data-start-time');
+    const e = chartDiv.getAttribute('data-end-time');
+    if (s && e) Plotly.relayout('compare-chart', { 'xaxis.range': [s, e] });
+  },
+
+  viewOneDay: function() { this.relayoutView(1); },
+
+  navigateTime: function(direction) {
+    const chartDiv = document.getElementById('compare-chart');
+    if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
+    const layout = chartDiv.layout || chartDiv._fullLayout || {};
+    const xaxis  = layout.xaxis;
+    if (!xaxis || !Array.isArray(xaxis.range)) return;
+    const start = new Date(xaxis.range[0]);
+    const end   = new Date(xaxis.range[1]);
+    const pan   = (end - start) * 0.75;
+    let newStart = new Date(start.getTime() + (direction === 'right' ? pan : -pan));
+    let newEnd   = new Date(end.getTime()   + (direction === 'right' ? pan : -pan));
+    // Clamp to data boundaries
+    const ds = chartDiv.getAttribute('data-start-time');
+    const de = chartDiv.getAttribute('data-end-time');
+    if (ds && newStart < new Date(ds)) {
+      const off = new Date(ds) - newStart;
+      newStart = new Date(ds);
+      newEnd   = new Date(newEnd.getTime() + off);
+    }
+    if (de && newEnd > new Date(de)) {
+      const off = newEnd - new Date(de);
+      newEnd   = new Date(de);
+      newStart = new Date(newStart.getTime() - off);
+    }
+    Plotly.relayout('compare-chart', {
+      'xaxis.range': [newStart.toISOString().replace('Z', ''), newEnd.toISOString().replace('Z', '')]
+    });
+  },
 
   _buildColorMap: function(ids) {
     const map = {};
@@ -184,29 +291,33 @@ window.ComparePanel = {
             yaxis
           });
 
-          // Weather icons: first selected model only
-          if (modelIdx === 0 && window.WeatherIcons) {
-            const icons = window.WeatherIcons.getIcons(hourly.weather_code || []);
+          // Weather icons per model, each on its own horizontal line (staggered vertically)
+          if (window.WeatherIcons && (hourly.weather_code || []).some(c => c != null)) {
+            const icons  = window.WeatherIcons.getIcons(hourly.weather_code || []);
+            const nModels = compareModels.length;
+            // Spread icon rows evenly within the top band (0.72–0.97), top model first
+            const iconTop    = 0.97;
+            const iconSpread = 0.25;
+            const yVal = nModels === 1
+              ? iconTop
+              : iconTop - (modelIdx / (nModels - 1)) * iconSpread;
             traces.push({
               x: times,
-              y: temp.map(t => (t || 0) + 1.5),
+              y: times.map(() => yVal),
               mode: 'text',
               text: icons,
               textfont: { size: 13 },
-              name: 'Weather',
+              name: `${model.label} icons`,
               legendgroup: model.id,
               showlegend: false,
               hoverinfo: 'text',
-              yaxis
+              yaxis: `y${orderedParams.length + 1}`
             });
           }
         }
 
         if (param === 'rain') {
-          const precip     = (hourly.precipitation || []).map(p => Math.max(0, p || 0));
-          const precipProb = hourly.precipitation_probability || [];
-
-          // Filled line per model
+          const precip = (hourly.precipitation || []).map(p => Math.max(0, p || 0));
           traces.push({
             x: times, y: precip,
             mode: 'lines',
@@ -215,30 +326,29 @@ window.ComparePanel = {
             showlegend: false,
             line: { color, width: 2 },
             fill: 'tozeroy',
-            fillcolor: color + '28', // ~16% opacity fill
+            fillcolor: color + '28',
             yaxis
           });
+        }
 
-          // Rain probability dashed for first model only (avoids clutter)
-          if (modelIdx === 0 && precipProb.length > 0) {
-            const yProb = rowIdx === 0 ? 'y2' : `y${rowIdx + 2}`;
-            traces.push({
-              x: times, y: precipProb,
-              mode: 'lines',
-              name: 'Rain prob. (%)',
-              legendgroup: 'rainprob',
-              showlegend: (rowIdx === orderedParams.indexOf('rain')),
-              line: { color: '#87CEEB', width: 1, dash: 'dot' },
-              fill: 'tozeroy',
-              fillcolor: 'rgba(135,206,235,0.10)',
-              yaxis: `y${orderedParams.length + 1}` // extra axis beyond the param rows
-            });
-          }
+        if (param === 'rain_prob') {
+          const prob = hourly.precipitation_probability || [];
+          traces.push({
+            x: times, y: prob,
+            mode: 'lines',
+            name: model.label,
+            legendgroup: model.id,
+            showlegend: false,
+            line: { color, width: 2, dash: 'dot' },
+            fill: 'tozeroy',
+            fillcolor: color + '22',
+            yaxis
+          });
         }
 
         if (param === 'wind') {
-          const speed = hourly.wind_speed_10m  || [];
-          const gusts = hourly.wind_gusts_10m  || [];
+          const speed = hourly.wind_speed_10m || [];
+          const gusts = hourly.wind_gusts_10m || [];
           traces.push({
             x: times, y: speed,
             mode: 'lines',
@@ -248,7 +358,6 @@ window.ComparePanel = {
             line: { color, width: 2 },
             yaxis
           });
-          // Wind gusts as thinner dashed line in same colour
           if (gusts.some(g => g != null && g > 0)) {
             traces.push({
               x: times, y: gusts,
@@ -262,10 +371,77 @@ window.ComparePanel = {
           }
         }
 
+        if (param === 'wind_dir') {
+          const dir = hourly.wind_direction_10m || [];
+          traces.push({
+            x: times, y: dir,
+            mode: 'markers',
+            name: model.label,
+            legendgroup: model.id,
+            showlegend: false,
+            marker: { color, size: 3 },
+            yaxis
+          });
+        }
+
         if (param === 'uv') {
           const uv = hourly.uv_index || [];
           traces.push({
             x: times, y: uv,
+            mode: 'lines',
+            name: model.label,
+            legendgroup: model.id,
+            showlegend: false,
+            line: { color, width: 2 },
+            yaxis
+          });
+        }
+
+        if (param === 'humidity') {
+          const hum = hourly.relative_humidity_2m || [];
+          traces.push({
+            x: times, y: hum,
+            mode: 'lines',
+            name: model.label,
+            legendgroup: model.id,
+            showlegend: false,
+            line: { color, width: 2 },
+            yaxis
+          });
+        }
+
+        if (param === 'dewpoint') {
+          const dp = hourly.dew_point_2m || [];
+          traces.push({
+            x: times, y: dp,
+            mode: 'lines',
+            name: model.label,
+            legendgroup: model.id,
+            showlegend: false,
+            line: { color, width: 2 },
+            yaxis
+          });
+        }
+
+        if (param === 'cloud') {
+          const cc = hourly.cloud_cover || [];
+          traces.push({
+            x: times, y: cc,
+            mode: 'lines',
+            name: model.label,
+            legendgroup: model.id,
+            showlegend: false,
+            line: { color, width: 2 },
+            fill: 'tozeroy',
+            fillcolor: color + '18',
+            yaxis
+          });
+        }
+
+        if (param === 'visibility') {
+          const vis = (hourly.visibility || []).map(v => v != null ? v / 1000 : null);
+          traces.push({
+            x: times, y: vis,
             mode: 'lines',
             name: model.label,
             legendgroup: model.id,
@@ -304,31 +480,36 @@ window.ComparePanel = {
     const yaxisConfig = {};
     orderedParams.forEach((param, i) => {
       const key = i === 0 ? 'yaxis' : `yaxis${i + 1}`;
+      const extra = {};
+      if (param === 'uv')        extra.range = [0, 12];
+      if (param === 'rain')      extra.rangemode = 'tozero';
+      if (param === 'rain_prob') { extra.rangemode = 'tozero'; extra.range = [0, 100]; }
+      if (param === 'wind')      extra.rangemode = 'tozero';
+      if (param === 'wind_dir')  { extra.range = [0, 360]; extra.tickvals = [0, 90, 180, 270, 360]; extra.ticktext = ['N', 'E', 'S', 'W', 'N']; }
+      if (param === 'humidity')  { extra.rangemode = 'tozero'; extra.range = [0, 100]; }
+      if (param === 'cloud')     { extra.rangemode = 'tozero'; extra.range = [0, 100]; }
+      if (param === 'visibility') extra.rangemode = 'tozero';
       yaxisConfig[key] = {
         title:     this.PARAM_YAXIS_TITLE[param],
         domain:    domains[i],
-        autorange: true,
+        anchor:    'x',
+        autorange: !extra.range,
         showgrid:  true,
         gridcolor: '#f0f0f0',
-        zeroline:  (param === 'rain' || param === 'uv'),
-        ...(param === 'uv'   ? { range: [0, 12] } : {}),
-        ...(param === 'rain' ? { rangemode: 'tozero' } : {}),
-        ...(param === 'wind' ? { rangemode: 'tozero' } : {}),
+        zeroline:  (param === 'rain' || param === 'uv' || param === 'rain_prob'),
+        ...extra,
       };
     });
 
-    // Extra axis for rain probability (overlays rain row)
-    const rainIdx = orderedParams.indexOf('rain');
-    if (rainIdx >= 0) {
-      const probAxisKey = `yaxis${orderedParams.length + 1}`;
-      const rainAxisRef = rainIdx === 0 ? 'y' : `y${rainIdx + 1}`;
-      yaxisConfig[probAxisKey] = {
-        title:      'Rain prob. (%)',
-        overlaying: rainAxisRef,
-        side:       'right',
-        range:      [0, 100],
-        showgrid:   false,
-        color:      '#87CEEB',
+    // Invisible overlay axis for weather icons (anchored to temperature row)
+    const tempIdx = orderedParams.indexOf('temperature');
+    if (tempIdx >= 0) {
+      const tempAxisRef = tempIdx === 0 ? 'y' : `y${tempIdx + 1}`;
+      yaxisConfig[`yaxis${n + 1}`] = {
+        overlaying: tempAxisRef,
+        range:      [0, 1],
+        visible:    false,
+        domain:     domains[tempIdx],
       };
     }
 

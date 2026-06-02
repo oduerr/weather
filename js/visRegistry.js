@@ -251,6 +251,17 @@ window.VisRegistry = {
       return;
     }
     window.ComparePanel.render(data, location, model, config);
+    
+    // Apply panel-specific configuration, but don't override a pending/restored viewport
+    if (config.defaultView) {
+      setTimeout(() => {
+        const vp = window.ViewportPreserver;
+        const shouldApplyDefault = !vp || (!vp.hasPending() && !vp.wasJustApplied());
+        if (shouldApplyDefault) {
+          window.ComparePanel.relayoutView(parseInt(config.defaultView));
+        }
+      }, 100);
+    }
   },
 
 };

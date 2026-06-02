@@ -444,7 +444,6 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     showtitle: true,
     width: window.innerWidth,
     height: window.innerHeight * 0.98,
-    grid: { rows: 3, columns: 1, pattern: "independent" },
 
     // X-axis settings - default to showing all data
     xaxis: { 
@@ -462,6 +461,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     yaxis1: {
       title: "Temperature (°C)",
       domain: [0.70, 1],
+      anchor: "x",
       color: "red",
       ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
     },  // 🔼 Slightly larger top row
@@ -469,15 +469,16 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       title: "Dew Point (°C)",
       overlaying: "y1",
       side: "right",
+      anchor: "x",
       color: "blue",
       ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
     },
 
-    yaxis3: { title: "Rainfall (mm)", domain: [0.45, 0.70], color: "#1E3A8A" },  // 🔽 Smaller middle row
-    yaxis4: { title: "Rain Probability (%) / Humidity (%) ", overlaying: "y3", side: "right", color: "#008B8B" },
+    yaxis3: { title: "Rainfall (mm)", domain: [0.45, 0.70], anchor: "x", color: "#1E3A8A" },  // 🔽 Smaller middle row
+    yaxis4: { title: "Rain Probability (%) / Humidity (%) ", overlaying: "y3", side: "right", anchor: "x", color: "#008B8B" },
 
-    yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35] },  // 🔼 More space for bottom row
-    yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", range: [0, 100], color: "darkred" },
+    yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35], anchor: "x" },  // 🔼 More space for bottom row
+    yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", anchor: "x", range: [0, 100], color: "darkred" },
 
     shapes: [...nightShading, shapeNow, ...lastObsShapes],
     showlegend: false,  // Hide legend
@@ -888,7 +889,6 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     showtitle: true,
     width: window.innerWidth,
     height: Math.max(window.innerHeight - 120, 400), // Mobile-friendly height
-    grid: { rows: 3, columns: 1, pattern: "independent" },
 
     // X-axis settings
     xaxis: { 
@@ -902,15 +902,16 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
       range: [startTime, endTime]
     },
 
-    yaxis1: { title: "UV Index", domain: [0.70, 1], color: "purple", range: [0, 12] },
+    yaxis1: { title: "UV Index", domain: [0.70, 1], anchor: "x", color: "purple", range: [0, 12] },
     yaxis2: { 
       title: "Wind Speed (km/h)", 
       domain: [0.35, 0.70], 
+      anchor: "x",
       color: "blue",
       autorange: true, // Ensure auto-scaling based on data
       rangemode: 'tozero' // Start from zero
     },
-    yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], color: "green", range: [0, 360] },
+    yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], anchor: "x", color: "green", range: [0, 360] },
 
     shapes: [...nightShading, ...beaufortShapes, shapeNow, ...lastObsShapesUV],
     showlegend: false, // remove legend for now

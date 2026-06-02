@@ -76,26 +76,40 @@ const locations = [
 // Model information for display purposes (typical expected ranges)
 // Note: API always requests 16 days and uses whatever data is returned
 const MODEL_INFO = {
+  // Machine Learning / AI
+  'google_metnet': { days: '10', category: 'Machine Learning' },
+  'ecmwf_aifs025_single': { days: '10', category: 'Machine Learning' },
+  'gfs_graphcast025': { days: '10', category: 'Machine Learning' },
+
   // Ultra high-resolution models (typically 1-3 days)
   'icon_d2': { days: '~2', category: 'Ultra High-Res' },  // ICON D2 48h
   'arome_france': { days: '~2', category: 'Ultra High-Res' },  // AROME 42h
+  'meteofrance_arome_france_hd': { days: '~2', category: 'Ultra High-Res' },
   'meteoswiss_icon_ch1': { days: '~1', category: 'Ultra High-Res' },  // MeteoSwiss CH1 33h
   'knmi_harmonie_arome_europe': { days: '~2', category: 'Ultra High-Res' },  // Harmonie 48h
   'dmi_harmonie_arome_europe': { days: '~2', category: 'Ultra High-Res' },  // Harmonie 48h
+  'ukmo_uk_deterministic_2km': { days: '~2', category: 'Ultra High-Res' },
+  'geosphere_arome_austria': { days: '~2', category: 'Ultra High-Res' },
+  'italia_meteo_arpae_icon_2i': { days: '~2', category: 'Ultra High-Res' },
   
   // Regional models (typically 3-5 days)
   'meteoswiss_icon_ch2': { days: '~5', category: 'Regional' },  // MeteoSwiss CH2 120h
   'arpege_europe': { days: '~4', category: 'Regional' },  // ARPEGE 96h
   
-  // Google MetNet
-  'google_metnet': { days: '10', category: 'Google MetNet' },
-
   // Global models (typically 7+ days)
   'best_match': { days: '16', category: 'Global' },  // Best Match
   'icon_seamless': { days: '~7', category: 'Global' },  // ICON Seamless
   'icon_eu': { days: '~7', category: 'Global' },  // ICON EU
-  'gfs025': { days: '10+', category: 'Global Extended' },  // GFS
-  'ecmwf_ifs025': { days: '10+', category: 'Global Extended' },  // ECMWF
+  'icon_global': { days: '~7', category: 'Global' }, // ICON Global
+  'gfs_global': { days: '16', category: 'Global' }, // GFS Global
+  'ukmo_global_deterministic_10km': { days: '8', category: 'Global' }, // UKMO Global
+  'meteofrance_arpege_world': { days: '8', category: 'Global' },
+  'gem_global': { days: '7', category: 'Global' }, // GEM Global
+  'jma_gsm': { days: '7', category: 'Global' }, // JMA Global
+  'bom_access_global': { days: '7', category: 'Global' }, // BOM ACCESS Global
+  'kma_gdps': { days: '7', category: 'Global' },
+  'gfs025': { days: '10+', category: 'Global Extended' },  // GFS Ensemble
+  'ecmwf_ifs025': { days: '10+', category: 'Global Extended' },  // ECMWF Ensemble
   
   // Default for unknown models
   'default': { days: '16d', category: 'Global' }
@@ -110,20 +124,46 @@ function getEnhancedModelLabel(model) {
   return `${model.label} ${typeIcon} (${info.days}d, ${info.category})`;
 }
 const models = [
+  // 1) Machine Learning / AI
   { id: "google_metnet", label: "🔵 Google MetNet", model: "google_metnet", type: "deterministic" },
+  { id: "ecmwf_aifs_det", label: "🇪🇺 ECMWF AIFS (ML)", model: "ecmwf_aifs025_single", type: "deterministic" },
+  { id: "gfs_graphcast_det", label: "🇺🇸 GFS GraphCast (ML)", model: "gfs_graphcast025", type: "deterministic" },
+
+  // 2) German Models (DWD)
   { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },
   { id: "icon_d2_det", label: "🇩🇪 ICON D2 48h", model: "icon_d2", type: "deterministic" },
   { id: "icon_seamless_det", label: "🇩🇪 Seamless", model: "icon_seamless", type: "deterministic" },
-  { id: "meteoswiss_icon_ch1", label: "🇨🇭 ICON CH1", model: "meteoswiss_icon_ch1", type: "deterministic" },
-  { id: "meteoswiss_icon_ch2", label: "🇨🇭 ICON CH2", model: "meteoswiss_icon_ch2", type: "deterministic" },
-  { id: "arpege_europe_det", label: "🇫🇷 ARPEGE Europe", model: "arpege_europe", type: "deterministic" },
-  { id: "arome_france_det", label: "🇫🇷 AROME France", model: "arome_france", type: "deterministic" },
-  { id: "knmi_harmonie_arome_europe_det", label: "🇳🇱 Harmonie AROME Europe", model: "knmi_harmonie_arome_europe", type: "deterministic" },
-  { id: "dmi_harmonie_arome_europe_det", label: "🇩🇰 Harmonie AROME Europe", model: "dmi_harmonie_arome_europe", type: "deterministic" },
+  { id: "icon_eu_det", label: "🇩🇪 ICON EU", model: "icon_eu", type: "deterministic" },
+  { id: "icon_global_det", label: "🇩🇪 ICON Global", model: "icon_global", type: "deterministic" },
   { id: "icon_d2_ensemble", label: "🇩🇪📊 ICON EPS D2", model: "icon_d2", type: "ensemble" },
   { id: "icon_eu_ensemble", label: "🇩🇪📊 ICON EPS EU", model: "icon_eu", type: "ensemble" },
+  { id: "icon_global_ensemble", label: "🇩🇪📊 ICON EPS Global", model: "icon_global", type: "ensemble" },
+
+  // 3) Swiss Models (MeteoSwiss)
+  { id: "meteoswiss_icon_ch1", label: "🇨🇭 ICON CH1", model: "meteoswiss_icon_ch1", type: "deterministic" },
+  { id: "meteoswiss_icon_ch2", label: "🇨🇭 ICON CH2", model: "meteoswiss_icon_ch2", type: "deterministic" },
   { id: "meteoswiss_icon_ch1_ensemble", label: "🇨🇭📊 ICON CH1 EPS", model: "meteoswiss_icon_ch1", type: "ensemble" },
   { id: "meteoswiss_icon_ch2_ensemble", label: "🇨🇭📊 ICON CH2 EPS", model: "meteoswiss_icon_ch2", type: "ensemble" },
+
+  // 4) French Models (Météo-France)
+  { id: "arome_france_hd_det", label: "🇫🇷 AROME France HD", model: "meteofrance_arome_france_hd", type: "deterministic" },
+  { id: "arome_france_det", label: "🇫🇷 AROME France", model: "arome_france", type: "deterministic" },
+  { id: "arpege_europe_det", label: "🇫🇷 ARPEGE Europe", model: "arpege_europe", type: "deterministic" },
+  { id: "arpege_world_det", label: "🇫🇷 ARPEGE World", model: "meteofrance_arpege_world", type: "deterministic" },
+
+  // 5) Other European & Global Models
+  { id: "ecmwf_ifs025_det", label: "🇪🇺 ECMWF IFS", model: "ecmwf_ifs025", type: "deterministic" },
+  { id: "gfs_global_det", label: "🇺🇸 GFS Global", model: "gfs_global", type: "deterministic" },
+  { id: "ukmo_global_det", label: "🇬🇧 UKMO Global", model: "ukmo_global_deterministic_10km", type: "deterministic" },
+  { id: "ukmo_uk_deterministic_2km_det", label: "🇬🇧 UKMO UK 2km", model: "ukmo_uk_deterministic_2km", type: "deterministic" },
+  { id: "gem_global_det", label: "🇨🇦 GEM Global", model: "gem_global", type: "deterministic" },
+  { id: "jma_gsm_det", label: "🇯🇵 JMA Global", model: "jma_gsm", type: "deterministic" },
+  { id: "bom_access_global_det", label: "🇦🇺 BOM ACCESS Global", model: "bom_access_global", type: "deterministic" },
+  { id: "kma_gdps_det", label: "🇰🇷 KMA GDPS Global", model: "kma_gdps", type: "deterministic" },
+  { id: "knmi_harmonie_arome_europe_det", label: "🇳🇱 Harmonie AROME Europe", model: "knmi_harmonie_arome_europe", type: "deterministic" },
+  { id: "dmi_harmonie_arome_europe_det", label: "🇩🇰 Harmonie AROME Europe", model: "dmi_harmonie_arome_europe", type: "deterministic" },
+  
+  // Ensemble models
   { id: "ecmwf_ensemble_1", label: "🇪🇺📊 ECMWF EPS", model: "ecmwf_ifs025", type: "ensemble" },
   { id: "gfs025", label: "🇺🇸📊 GFS Ensemble", model: "gfs025", type: "ensemble" },
 ];
@@ -481,14 +521,25 @@ async function processWeatherData(data, selectedLoc, model, selectedPanel = 'ove
 window.ViewportPreserver = {
   pending: null,
   lastAppliedAt: 0,
+  getActivePlotDiv() {
+    const compareChart = document.getElementById('compare-chart');
+    if (compareChart && compareChart.classList && compareChart.classList.contains('js-plotly-plot')) {
+      return compareChart;
+    }
+    const plotDiv = document.getElementById('plot');
+    if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
+      return plotDiv;
+    }
+    return null;
+  },
   capture() {
     try {
-      const plotDiv = document.getElementById('plot');
-      if (!plotDiv || !plotDiv.classList || !plotDiv.classList.contains('js-plotly-plot')) {
+      const activeDiv = this.getActivePlotDiv();
+      if (!activeDiv) {
         this.pending = null;
         return;
       }
-      const layout = plotDiv.layout || plotDiv._fullLayout || {};
+      const layout = activeDiv.layout || activeDiv._fullLayout || {};
       const xRange = (layout.xaxis && Array.isArray(layout.xaxis.range)) ? [layout.xaxis.range[0], layout.xaxis.range[1]] : null;
       const yRanges = {};
       Object.keys(layout).forEach(key => {
@@ -512,10 +563,10 @@ window.ViewportPreserver = {
     const saved = this.pending;
     if (!saved || !saved.xRange) { this.pending = null; return; }
     try {
-      const plotDiv = document.getElementById('plot');
-      if (!plotDiv) { this.pending = null; return; }
-      const ds = plotDiv.getAttribute('data-start-time');
-      const de = plotDiv.getAttribute('data-end-time');
+      const activeDiv = this.getActivePlotDiv();
+      if (!activeDiv) { this.pending = null; return; }
+      const ds = activeDiv.getAttribute('data-start-time');
+      const de = activeDiv.getAttribute('data-end-time');
       if (!ds || !de) { this.pending = null; return; }
       const domainStart = new Date(ds);
       const domainEnd = new Date(de);
@@ -550,7 +601,7 @@ window.ViewportPreserver = {
           }
         });
       }
-      Plotly.relayout('plot', update);
+      Plotly.relayout(activeDiv.id, update);
       this.lastAppliedAt = Date.now();
     } catch (e) {
       console.warn('ViewportPreserver.applyIfPending failed', e);
@@ -730,7 +781,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Add View Range Button Event Handlers with URL updates
 document.getElementById("view1d").addEventListener("click", function() {
-  if (window.WeatherPlot && typeof window.WeatherPlot.viewOneDay === 'function') {
+  if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
+    window.ComparePanel.viewOneDay();
+  } else if (window.WeatherPlot && typeof window.WeatherPlot.viewOneDay === 'function') {
     window.WeatherPlot.viewOneDay();
   }
   // Update URL with view parameter
@@ -739,28 +792,40 @@ document.getElementById("view1d").addEventListener("click", function() {
 });
 
 document.getElementById("view2d").addEventListener("click", function() {
-  window.WeatherPlot.adjustViewRange(2);
+  if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
+    window.ComparePanel.relayoutView(2);
+  } else {
+    window.WeatherPlot.adjustViewRange(2);
+  }
   // Update URL with view parameter
   const currentState = getCurrentAppState();
   updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '2d');
 });
 
 document.getElementById("view5d").addEventListener("click", function() {
-  window.WeatherPlot.adjustViewRange(5);
+  if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
+    window.ComparePanel.relayoutView(5);
+  } else {
+    window.WeatherPlot.adjustViewRange(5);
+  }
   // Update URL with view parameter
   const currentState = getCurrentAppState();
   updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '5d');
 });
 
 document.getElementById("viewAll").addEventListener("click", function() {
-  const plotDiv = document.getElementById('plot');
-  // Only attempt to relayout if a Plotly chart is active
-  if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
-    const startTime = plotDiv.getAttribute('data-start-time');
-    const endTime = plotDiv.getAttribute('data-end-time');
-    Plotly.relayout('plot', {
-      'xaxis.range': [startTime, endTime]
-    });
+  if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
+    window.ComparePanel.viewAll();
+  } else {
+    const plotDiv = document.getElementById('plot');
+    // Only attempt to relayout if a Plotly chart is active
+    if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
+      const startTime = plotDiv.getAttribute('data-start-time');
+      const endTime = plotDiv.getAttribute('data-end-time');
+      Plotly.relayout('plot', {
+        'xaxis.range': [startTime, endTime]
+      });
+    }
   }
   // Update URL with view parameter
   const currentState = getCurrentAppState();
@@ -769,13 +834,17 @@ document.getElementById("viewAll").addEventListener("click", function() {
 
 // Add Navigation Button Event Handlers
 document.getElementById("navLeft").addEventListener("click", function() {
-  if (window.SwipeNavigation && typeof window.SwipeNavigation.handleSwipe === 'function') {
+  if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
+    window.ComparePanel.navigateTime('left');
+  } else if (window.SwipeNavigation && typeof window.SwipeNavigation.handleSwipe === 'function') {
     window.SwipeNavigation.handleSwipe('left');
   }
 });
 
 document.getElementById("navRight").addEventListener("click", function() {
-  if (window.SwipeNavigation && typeof window.SwipeNavigation.handleSwipe === 'function') {
+  if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
+    window.ComparePanel.navigateTime('right');
+  } else if (window.SwipeNavigation && typeof window.SwipeNavigation.handleSwipe === 'function') {
     window.SwipeNavigation.handleSwipe('right');
   }
 });
@@ -805,13 +874,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Handle window resize for mobile
   window.addEventListener('resize', function() {
-    const plotDiv = document.getElementById('plot');
-    if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
-      // Update plot dimensions only when a Plotly chart is present
-      Plotly.relayout('plot', {
+    const compareChart = document.getElementById('compare-chart');
+    if (compareChart && compareChart.classList && compareChart.classList.contains('js-plotly-plot')) {
+      Plotly.relayout('compare-chart', {
         width: window.innerWidth,
-        height: Math.max(window.innerHeight - 120, 400)
+        height: Math.max(window.innerHeight - 150, 350)
       });
+    } else {
+      const plotDiv = document.getElementById('plot');
+      if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
+        // Update plot dimensions only when a Plotly chart is present
+        Plotly.relayout('plot', {
+          width: window.innerWidth,
+          height: Math.max(window.innerHeight - 120, 400)
+        });
+      }
     }
   });
 });

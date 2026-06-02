@@ -45,7 +45,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 - `js/swipeNavigation.js` → Swipe/keyboard panning
   - Horizontal swipes outside the Plotly chart area pan by ~0.75× current range.
-  - Arrow left/right keys pan similarly; respects data boundaries from `#plot` attributes.
+  - Arrow left/right keys pan similarly; respects data boundaries from `#plot` or `#compare-chart` attributes depending on the active panel.
 
 ---
 
@@ -63,7 +63,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 ## Plot patterns and guardrails
 
-- Always set `#plot` attributes `data-start-time` and `data-end-time` after computing the domain; view buttons, swipe, and navigation depend on them.
+- Always set the active plot attributes `data-start-time` and `data-end-time` after computing the domain; view buttons, swipe, and navigation depend on them. (The active plot element is `#compare-chart` in compare panel mode, and `#plot` in other modes).
 - Use `ViewportPreserver.capture()` before operations that rebuild Plotly and `ViewportPreserver.applyIfPending()` after render to keep zoom/pan across model switches.
 - On mobile, Plotly toolbar is hidden; layout sizes depend on window size. Relayout on `resize` and orientation changes is already wired.
 - The `actuals` panel must not create a Plotly plot. It renders a simple table under `#plot`.
@@ -113,7 +113,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
   - Use existing globals and patterns; avoid ES module imports to keep file:// compatibility.
   - Update URL via `updateUrlWithAppState()` on any state change; preserve history.
   - Capture/apply viewport when replotting to preserve user zoom/pan.
-  - Set `data-start-time`/`data-end-time` on `#plot` when Plotly is active.
+  - Set `data-start-time`/`data-end-time` on the active plot container (`#plot` or `#compare-chart`) when Plotly is active.
   - Keep `#fade-button` semantics manual‑only; ensure its z‑index stays above `#controls`.
   - Keep changes minimal; prefer adding new modules/functions over invasive edits.
 

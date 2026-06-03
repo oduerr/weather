@@ -15,6 +15,14 @@ window.VisRegistry = {
    * Renders temperature charts with ensemble data
    */
   temperature: function(data, location, model, config = {}) {
+    const plot = document.getElementById('plot');
+    if (plot) {
+      if (window.Plotly && plot.classList && plot.classList.contains('js-plotly-plot')) {
+        try { Plotly.purge(plot); } catch (_) {}
+      }
+      plot.innerHTML = '';
+    }
+
     if (!window.WeatherPlot || !window.WeatherPlot.renderWeatherData) {
       console.error('WeatherPlot not available');
       return;
@@ -40,6 +48,14 @@ window.VisRegistry = {
    * Renders UV index and wind charts with ensemble data
    */
   uv_wind: function(data, location, model, config = {}) {
+    const plot = document.getElementById('plot');
+    if (plot) {
+      if (window.Plotly && plot.classList && plot.classList.contains('js-plotly-plot')) {
+        try { Plotly.purge(plot); } catch (_) {}
+      }
+      plot.innerHTML = '';
+    }
+
     if (!window.WeatherPlot || !window.WeatherPlot.renderUVWindData) {
       console.error('WeatherPlot UV/Wind renderer not available');
       return;

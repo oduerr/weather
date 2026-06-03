@@ -77,7 +77,6 @@ const locations = [
 // Note: API always requests 16 days and uses whatever data is returned
 const MODEL_INFO = {
   // Machine Learning / AI
-  'google_metnet': { days: '10', category: 'Machine Learning' },
   'ecmwf_aifs025_single': { days: '10', category: 'Machine Learning' },
   'gfs_graphcast025': { days: '10', category: 'Machine Learning' },
 
@@ -125,7 +124,6 @@ function getEnhancedModelLabel(model) {
 }
 const models = [
   // 1) Machine Learning / AI
-  { id: "google_metnet", label: "🔵 Google MetNet", model: "google_metnet", type: "deterministic" },
   { id: "ecmwf_aifs_det", label: "🇪🇺 ECMWF AIFS (ML)", model: "ecmwf_aifs025_single", type: "deterministic" },
   { id: "gfs_graphcast_det", label: "🇺🇸 GFS GraphCast (ML)", model: "gfs_graphcast025", type: "deterministic" },
 
@@ -322,12 +320,10 @@ if (urlLocation) {
   locSelect.selectedIndex = 0;
 }
 
-// Populate Model Dropdown with enhanced labels (Google MetNet only shown when key is set)
+// Populate Model Dropdown with enhanced labels
 function populateModelDropdown() {
-  const hasGoogleKey = !!localStorage.getItem('googleApiKey');
   modSelect.innerHTML = '';
   models.forEach(m => {
-    if (m.id === 'google_metnet' && !hasGoogleKey) return;
     const opt = document.createElement("option");
     opt.value = m.id;
     opt.textContent = getEnhancedModelLabel(m);
@@ -335,18 +331,6 @@ function populateModelDropdown() {
   });
 }
 populateModelDropdown();
-
-function updateGoogleFetchTimeDisplay(location) {
-  const span = document.getElementById('googleFetchTime');
-  if (!span) return;
-  if (modSelect.value === 'google_metnet' && location && window.WeatherAPI.getGoogleFetchTime) {
-    const t = window.WeatherAPI.getGoogleFetchTime(location);
-    span.textContent = t ? `↻ ${t}` : '';
-    span.style.display = t ? '' : 'none';
-  } else {
-    span.style.display = 'none';
-  }
-}
 
 // Set model from URL or default
 if (urlParams.model && models.find(m => m.id === urlParams.model)) {
@@ -500,7 +484,6 @@ window.fetchAndPlot = async function fetchAndPlot() {
     }
     
     // Data updated successfully (status element removed to save space)
-    updateGoogleFetchTimeDisplay(selectedLoc);
   } catch (err) {
     console.error("Error fetching data:", err);
     // Error status removed to save space - check console for errors
@@ -677,29 +660,7 @@ function restoreViewFromUrl(view) {
   }
 }
 
-// Settings modal — registered directly on DOMContentLoaded (no setTimeout delay)
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('settingsBtn').addEventListener('click', function() {
-    document.getElementById('googleApiKeyInput').value = localStorage.getItem('googleApiKey') || '';
-    document.getElementById('settingsModal').style.display = 'flex';
-  });
-  document.getElementById('settingsCancelBtn').addEventListener('click', function() {
-    document.getElementById('settingsModal').style.display = 'none';
-  });
-  document.getElementById('settingsForm').addEventListener('submit', function() {
-    const key = document.getElementById('googleApiKeyInput').value.trim();
-    const prevModel = modSelect.value;
-    if (key) {
-      localStorage.setItem('googleApiKey', key);
-    } else {
-      localStorage.removeItem('googleApiKey');
-    }
-    document.getElementById('settingsModal').style.display = 'none';
-    populateModelDropdown();
-    const optionExists = Array.from(modSelect.options).some(o => o.value === prevModel);
-    modSelect.value = optionExists ? prevModel : (modSelect.options[0]?.value || '');
-  });
-});
+
 
 // Initialize the plot with default selections after API is loaded
 document.addEventListener('DOMContentLoaded', function() {

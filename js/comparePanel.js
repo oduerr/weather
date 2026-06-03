@@ -101,7 +101,6 @@ window.ComparePanel = {
     controlsDiv.innerHTML = '';
     const self = this;
     const allModels    = window.allModels || [];
-    const hasGoogleKey = !!localStorage.getItem('googleApiKey');
 
     const label = (text) => {
       const s = document.createElement('span');
@@ -132,9 +131,7 @@ window.ComparePanel = {
     // Model toggles
     controlsDiv.appendChild(label('Models:'));
     controlsDiv.appendChild(toggleBtn('All', false, () => {
-      self.selectedModelIds = allModels
-        .filter(m => m.id !== 'google_metnet' || hasGoogleKey)
-        .map(m => m.id);
+      self.selectedModelIds = allModels.map(m => m.id);
       if (window.fetchAndPlot) window.fetchAndPlot();
     }));
     controlsDiv.appendChild(toggleBtn('None', false, () => {
@@ -142,7 +139,6 @@ window.ComparePanel = {
       if (window.fetchAndPlot) window.fetchAndPlot();
     }));
     allModels.forEach(m => {
-      if (m.id === 'google_metnet' && !hasGoogleKey) return;
       controlsDiv.appendChild(toggleBtn(
         m.label,
         self.selectedModelIds.includes(m.id),

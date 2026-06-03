@@ -303,7 +303,7 @@ window.ComparePanel = {
               x: times,
               y: times.map(() => yVal),
               mode: 'lines',
-              line: { color: color + '30', width: 1, dash: 'dash' },
+              line: { color: color + '70', width: 1.5, dash: 'dash' },
               name: `${model.label} guide`,
               legendgroup: model.id,
               showlegend: false,

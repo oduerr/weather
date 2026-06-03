@@ -520,6 +520,79 @@ window.WeatherAPI.getObservationData = async function(location) {
 }
 
 /**
+ * Formats a Unix timestamp representing model initialization time
+ * into a short string like "Jun 3, 06:00 UTC".
+ */
+window.WeatherAPI.formatInitTime = function(unixTime) {
+  if (!unixTime) return "";
+  const d = new Date(unixTime * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  const hours = pad(d.getUTCHours());
+  const minutes = pad(d.getUTCMinutes());
+  return `${month} ${day}, ${hours}:${minutes} UTC`;
+};
+
+/**
+ * Fetches model run/update metadata from Open-Meteo static folder
+ */
+window.WeatherAPI.getModelMetadata = async function(model) {
+  const METADATA_PATHS = {
+    "ecmwf_aifs025_single": "ecmwf_aifs025_single",
+    "gfs_graphcast025": "ncep_gfs_graphcast025",
+    "best_match": "dwd_icon_d2", 
+    "icon_d2": "dwd_icon_d2",
+    "icon_seamless": "dwd_icon_d2", 
+    "icon_eu": "dwd_icon_eu",
+    "icon_global": "dwd_icon",
+    "meteoswiss_icon_ch1": "meteoswiss_icon_ch1",
+    "meteoswiss_icon_ch2": "meteoswiss_icon_ch2",
+    "meteofrance_arome_france_hd": "meteofrance_arome_france_hd",
+    "arome_france": "meteofrance_arome_france0025",
+    "arpege_europe": "meteofrance_arpege_europe",
+    "meteofrance_arpege_world": "meteofrance_arpege_world025",
+    "ecmwf_ifs025": "ecmwf_ifs025",
+    "gfs_global": "ncep_gfs025",
+    "ukmo_global_deterministic_10km": "ukmo_global_deterministic_10km",
+    "ukmo_uk_deterministic_2km": "ukmo_uk_deterministic_2km",
+    "gem_global": "cmc_gem_gdps_15km",
+    "jma_gsm": "jma_gsm",
+    "bom_access_global": "bom_access_global",
+    "kma_gdps": "kma_gdps",
+    "knmi_harmonie_arome_europe": "knmi_harmonie_arome_europe",
+    "dmi_harmonie_arome_europe": "dmi_harmonie_arome_europe",
+    "gfs025": "ncep_gfs025"
+  };
+
+  const folderName = METADATA_PATHS[model.model] || model.model;
+  // Use cache in localStorage (1h TTL)
+  const cacheKey = `meta_${folderName}`;
+  const cachedMeta = localStorage.getItem(cacheKey);
+  if (cachedMeta) {
+    try {
+      const entry = JSON.parse(cachedMeta);
+      if (Date.now() - entry.timestamp < 3600000) { // 1h
+        return entry.data;
+      }
+    } catch(e) {}
+  }
+
+  const url = `https://api.open-meteo.com/data/${folderName}/static/meta.json`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Metadata API returned " + res.status);
+    const data = await res.json();
+    localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+    return data;
+  } catch(err) {
+    console.error("Failed to load model metadata:", err);
+    return null;
+  }
+};
+
+/**
  * Get weather data from Open-Meteo API with caching
  * @param {Object} location - Location object with lat, lon, name
  * @param {Object} model - Model object with id, type, model properties
@@ -532,6 +605,16 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
       window.WeatherAPI.getForecastData(location, model),
       window.WeatherAPI.getObservationData(location)
     ]);
+    
+    // Also load model metadata quietly
+    try {
+      const metadata = await window.WeatherAPI.getModelMetadata(model);
+      if (metadata) {
+        forecastData.model_metadata = metadata;
+      }
+    } catch (metaErr) {
+      console.warn("Could not load model metadata:", metaErr);
+    }
     
     // Return unified data structure
     return {

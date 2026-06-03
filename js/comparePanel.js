@@ -265,6 +265,17 @@ window.ComparePanel = {
   _buildTraces: function(compareModels, allData, orderedParams, colorMap) {
     const traces = [];
 
+    // Helper to format metadata run times
+    const formatInitTime = (window.WeatherAPI && window.WeatherAPI.formatInitTime) 
+      ? window.WeatherAPI.formatInitTime 
+      : function(unixTime) {
+          if (!unixTime) return "";
+          const d = new Date(unixTime * 1000);
+          const pad = n => String(n).padStart(2, '0');
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+        };
+
     orderedParams.forEach((param, rowIdx) => {
       // y1 is 'y' in Plotly; subsequent axes are y2, y3, …
       const yaxis = rowIdx === 0 ? 'y' : `y${rowIdx + 1}`;
@@ -275,12 +286,18 @@ window.ComparePanel = {
         const color  = colorMap[model.id] || this.MODEL_COLORS[modelIdx % this.MODEL_COLORS.length];
         const showlegend = (rowIdx === 0); // one legend entry per model
 
+        let displayName = model.label;
+        if (allData[modelIdx].forecast.model_metadata && allData[modelIdx].forecast.model_metadata.last_run_initialisation_time) {
+          const unixTime = allData[modelIdx].forecast.model_metadata.last_run_initialisation_time;
+          displayName = `${model.label} (${formatInitTime(unixTime)})`;
+        }
+
         if (param === 'temperature') {
           const temp = hourly.temperature_2m || [];
           traces.push({
             x: times, y: temp,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend,
             line: { color, width: 2 },
@@ -304,7 +321,7 @@ window.ComparePanel = {
               y: times.map(() => yVal),
               mode: 'lines',
               line: { color: color + '70', width: 1.5, dash: 'dash' },
-              name: `${model.label} guide`,
+              name: `${displayName} guide`,
               legendgroup: model.id,
               showlegend: false,
               hoverinfo: 'none',
@@ -317,12 +334,12 @@ window.ComparePanel = {
               mode: 'text',
               text: icons,
               textfont: { size: 13 },
-              name: `${model.label} icons`,
+              name: `${displayName} icons`,
               legendgroup: model.id,
               showlegend: false,
               hovertext: times.map((t, idx) => {
                 const iconSymbol = icons[idx] || '';
-                return `${model.label}: ${iconSymbol}`;
+                return `${displayName}: ${iconSymbol}`;
               }),
               hoverinfo: 'text',
               yaxis: `y${orderedParams.length + 1}`
@@ -335,7 +352,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: precip,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },
@@ -350,7 +367,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: prob,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2, dash: 'dot' },
@@ -366,7 +383,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: speed,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },
@@ -376,7 +393,7 @@ window.ComparePanel = {
             traces.push({
               x: times, y: gusts,
               mode: 'lines',
-              name: `${model.label} gusts`,
+              name: `${displayName} gusts`,
               legendgroup: model.id,
               showlegend: false,
               line: { color, width: 1, dash: 'dash' },
@@ -390,7 +407,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: dir,
             mode: 'markers',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             marker: { color, size: 3 },
@@ -403,7 +420,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: uv,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },
@@ -416,7 +433,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: hum,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },
@@ -429,7 +446,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: dp,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },
@@ -442,7 +459,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: cc,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },
@@ -457,7 +474,7 @@ window.ComparePanel = {
           traces.push({
             x: times, y: vis,
             mode: 'lines',
-            name: model.label,
+            name: displayName,
             legendgroup: model.id,
             showlegend: false,
             line: { color, width: 2 },

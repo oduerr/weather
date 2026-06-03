@@ -431,9 +431,14 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   });
 
   // Step 3: Add the annotations to the layout
+  let titleSuffix = "";
+  if (forecast.model_metadata && forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
+    titleSuffix = ` | 🕒 Run: ${window.WeatherAPI.formatInitTime(forecast.model_metadata.last_run_initialisation_time)}`;
+  }
+
   const layout = {
     title: {
-      text: `📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} ${model.label} – ${location.name} `,
+      text: `📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} ${model.label} – ${location.name}${titleSuffix}`,
       x: 0.05, // Align title to the left
       y: -0.05, // Move title up slightly
       xanchor: "left",
@@ -876,9 +881,14 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   });
 
   // Build layout for UV/Wind panel
+  let titleSuffix = "";
+  if (forecast.model_metadata && forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
+    titleSuffix = ` | 🕒 Run: ${window.WeatherAPI.formatInitTime(forecast.model_metadata.last_run_initialisation_time)}`;
+  }
+
   const layout = {
     title: {
-      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`,
+      text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}${titleSuffix}`,
       x: 0.05,
       y: -0.05,
       xanchor: "left",

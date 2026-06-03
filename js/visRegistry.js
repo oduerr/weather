@@ -204,7 +204,7 @@ window.VisRegistry = {
 
     function th(text) {
       const el = document.createElement('th');
-      el.textContent = text;
+      el.innerHTML = text;
       el.style.textAlign = 'left';
       el.style.padding = '8px';
       el.style.borderBottom = '1px solid #ddd';
@@ -231,7 +231,13 @@ window.VisRegistry = {
     headRow.appendChild(th('Metric'));
     headRow.appendChild(th('Observed (Station)'));
     headRow.appendChild(th('Observed (BrightSky)'));
-    headRow.appendChild(th(`Forecast (${model && model.label ? model.label : 'Model'})`));
+    
+    let forecastHeader = `Forecast (${model && model.label ? model.label : 'Model'})`;
+    if (data && data.forecast && data.forecast.model_metadata && data.forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
+      const formatted = window.WeatherAPI.formatInitTime(data.forecast.model_metadata.last_run_initialisation_time);
+      forecastHeader = `Forecast (${model.label})<br><span style="font-size:11px;font-weight:normal;color:#666;">Run: ${formatted}</span>`;
+    }
+    headRow.appendChild(th(forecastHeader));
     thead.appendChild(headRow);
 
     const tbody = document.createElement('tbody');

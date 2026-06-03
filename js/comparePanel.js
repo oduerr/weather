@@ -297,6 +297,20 @@ window.ComparePanel = {
             const yVal = nModels === 1
               ? iconTop
               : iconTop - (modelIdx / (nModels - 1)) * iconSpread;
+
+            // Horizontal guide line behind weather symbols
+            traces.push({
+              x: times,
+              y: times.map(() => yVal),
+              mode: 'lines',
+              line: { color: color + '30', width: 1, dash: 'dash' },
+              name: `${model.label} guide`,
+              legendgroup: model.id,
+              showlegend: false,
+              hoverinfo: 'none',
+              yaxis: `y${orderedParams.length + 1}`
+            });
+
             traces.push({
               x: times,
               y: times.map(() => yVal),
@@ -519,7 +533,9 @@ window.ComparePanel = {
     // Build legend badges for weather icon rows (if temperature is selected)
     const iconAnnotations = [];
     if (tempIdx >= 0) {
-      const yref = `y${n + 1}`;
+      const tempDomain = domains[tempIdx];
+      const domainHeight = tempDomain[1] - tempDomain[0];
+      
       compareModels.forEach((model, modelIdx) => {
         const nModels = compareModels.length;
         const iconTop    = 0.97;
@@ -528,13 +544,15 @@ window.ComparePanel = {
           ? iconTop
           : iconTop - (modelIdx / (nModels - 1)) * iconSpread;
           
+        // Map to paper coordinate
+        const yp = tempDomain[0] + yVal * domainHeight;
         const color = colorMap[model.id] || '#333';
         
         iconAnnotations.push({
           x: 0.005,
-          y: yVal,
+          y: yp,
           xref: 'paper',
-          yref: yref,
+          yref: 'paper',
           text: `<b>${model.label}</b>`,
           showarrow: false,
           xanchor: 'left',

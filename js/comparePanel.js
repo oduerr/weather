@@ -306,6 +306,10 @@ window.ComparePanel = {
               name: `${model.label} icons`,
               legendgroup: model.id,
               showlegend: false,
+              hovertext: times.map((t, idx) => {
+                const iconSymbol = icons[idx] || '';
+                return `${model.label}: ${iconSymbol}`;
+              }),
               hoverinfo: 'text',
               yaxis: `y${orderedParams.length + 1}`
             });
@@ -512,6 +516,40 @@ window.ComparePanel = {
     // xaxis anchors to bottom row
     const bottomRef = n === 1 ? 'y' : `y${n}`;
 
+    // Build legend badges for weather icon rows (if temperature is selected)
+    const iconAnnotations = [];
+    if (tempIdx >= 0) {
+      const yref = `y${n + 1}`;
+      compareModels.forEach((model, modelIdx) => {
+        const nModels = compareModels.length;
+        const iconTop    = 0.97;
+        const iconSpread = 0.25;
+        const yVal = nModels === 1
+          ? iconTop
+          : iconTop - (modelIdx / (nModels - 1)) * iconSpread;
+          
+        const color = colorMap[model.id] || '#333';
+        
+        iconAnnotations.push({
+          x: 0.005,
+          y: yVal,
+          xref: 'paper',
+          yref: yref,
+          text: `<b>${model.label}</b>`,
+          showarrow: false,
+          xanchor: 'left',
+          yanchor: 'middle',
+          font: { size: 9, color: color },
+          bordercolor: color + '40',
+          borderwidth: 1,
+          borderpad: 2,
+          bgcolor: 'rgba(255, 255, 255, 0.9)',
+        });
+      });
+    }
+
+    const allAnnotations = [...weekdayAnnotations, ...iconAnnotations];
+
     return {
       width:  window.innerWidth,
       height: Math.max(window.innerHeight - 150, 350),
@@ -539,7 +577,7 @@ window.ComparePanel = {
         font:        { size: 11 },
         orientation: 'h',
       },
-      annotations: weekdayAnnotations,
+      annotations: allAnnotations,
       margin:      { l: 60, r: 60, t: 30, b: 55 },
       plot_bgcolor:  'white',
       paper_bgcolor: 'white',

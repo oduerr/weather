@@ -566,9 +566,23 @@ window.WeatherAPI.getModelMetadata = async function(model) {
     "gfs025": "ncep_gfs025"
   };
 
-  const folderName = METADATA_PATHS[model.model] || model.model;
+  const ENSEMBLE_METADATA_PATHS = {
+    "meteoswiss_icon_ch1": "meteoswiss_icon_ch1_ensemble",
+    "meteoswiss_icon_ch2": "meteoswiss_icon_ch2_ensemble",
+    "icon_d2": "dwd_icon_d2_eps",
+    "icon_eu": "dwd_icon_eu_eps",
+    "icon_global": "dwd_icon_eps",
+    "ecmwf_ifs025": "ecmwf_ifs025_ensemble",
+    "gfs025": "ncep_gefs025"
+  };
+
+  const isEnsemble = model.type === "ensemble";
+  const folderName = isEnsemble
+    ? (ENSEMBLE_METADATA_PATHS[model.model] || model.model)
+    : (METADATA_PATHS[model.model] || model.model);
+
   // Use cache in localStorage (1h TTL)
-  const cacheKey = `meta_${folderName}`;
+  const cacheKey = `meta_${folderName}_${isEnsemble ? 'ensemble' : 'deterministic'}`;
   const cachedMeta = localStorage.getItem(cacheKey);
   if (cachedMeta) {
     try {
@@ -579,7 +593,8 @@ window.WeatherAPI.getModelMetadata = async function(model) {
     } catch(e) {}
   }
 
-  const url = `https://api.open-meteo.com/data/${folderName}/static/meta.json`;
+  const domain = isEnsemble ? "ensemble-api.open-meteo.com" : "api.open-meteo.com";
+  const url = `https://${domain}/data/${folderName}/static/meta.json`;
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error("Metadata API returned " + res.status);

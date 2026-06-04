@@ -236,58 +236,80 @@ window.OverviewPanel = {
    */
   renderOverviewLayout: function(plot, days, isEnsemble, modelLabel, location, forecast) {
     const container = document.createElement('div');
-    container.style.cssText = `
-      padding: 16px;
-      max-width: 100vw;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      height: calc(100vh - 120px);
-      overflow-y: auto;
-    `;
+    container.style.cssText = 'padding:16px;max-width:100vw;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;height:calc(100vh - 120px);overflow-y:auto;';
 
-    // Header
-    const header = document.createElement('div');
-    header.style.cssText = `
-      text-align: center;
-      margin-bottom: 20px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-      position: sticky;
-      top: 0;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-      padding: 10px 0;
-      z-index: 10;
-    `;
-    // Create location info line
+    // Sticky header
     const locationInfo = this.formatLocationInfo(location, forecast);
-    
-    header.innerHTML = `
-      <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">
-        Weather Overview - ${modelLabel} (${days.length} days)
-      </div>
-      <div style="font-size: 12px; color: #666; font-weight: normal;">
-        ${locationInfo}
-      </div>
-    `;
+    const header = document.createElement('div');
+    header.style.cssText = 'text-align:center;margin-bottom:16px;position:sticky;top:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);padding:10px 0;z-index:10;';
+    header.innerHTML = `<div style="font-size:18px;font-weight:bold;color:#333;margin-bottom:4px;">Weather Overview — ${modelLabel}</div><div style="font-size:12px;color:#666;">${locationInfo}</div>`;
     container.appendChild(header);
 
-    // Days container - now scrollable
-    const daysContainer = document.createElement('div');
-    daysContainer.style.cssText = `
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-width: 100%;
-    `;
+    // Sticky day-name column headers (Mon … Sun)
+    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const colHeader = document.createElement('div');
+    colHeader.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:6px;position:sticky;top:66px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);z-index:9;padding-bottom:4px;';
+    DAY_NAMES.forEach((name, i) => {
+      const cell = document.createElement('div');
+      cell.style.cssText = `text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${i >= 5 ? '#c0392b' : '#555'};`;
+      cell.textContent = name;
+      colHeader.appendChild(cell);
+    });
+    container.appendChild(colHeader);
 
-    days.forEach(day => {
-      const dayCard = this.createDayCard(day, isEnsemble);
-      daysContainer.appendChild(dayCard);
+    // Today string (YYYY-MM-DD) for highlighting
+    const todayStr = new Date().toLocaleDateString('sv-SE');
+
+    // Monday-align: find how many empty slots before first forecast day
+    const firstDow = days[0].dateObj.getDay(); // 0=Sun
+    const mondayOffset = firstDow === 0 ? 6 : firstDow - 1;
+    const slots = [...Array(mondayOffset).fill(null), ...days];
+
+    // Split into weeks of 7
+    const weeks = [];
+    for (let i = 0; i < slots.length; i += 7) {
+      const week = slots.slice(i, i + 7);
+      while (week.length < 7) week.push(null);
+      weeks.push(week);
+    }
+
+    let shownMonths = new Set();
+    weeks.forEach(week => {
+      // Month label: show at the first week (for current month) and whenever the 1st of a month appears
+      const monthStartSlot = week.find(s => s && new Date(s.date + 'T12:00').getDate() === 1);
+      const firstSlot = week.find(s => s !== null);
+      const labelSlot = monthStartSlot || (shownMonths.size === 0 ? firstSlot : null);
+
+      if (labelSlot) {
+        const monthKey = labelSlot.date.slice(0, 7); // YYYY-MM
+        if (!shownMonths.has(monthKey)) {
+          shownMonths.add(monthKey);
+          const monthLabel = document.createElement('div');
+          monthLabel.style.cssText = 'font-size:13px;font-weight:700;color:#333;margin:14px 0 4px 2px;letter-spacing:.3px;';
+          monthLabel.textContent = new Date(labelSlot.date + 'T12:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          container.appendChild(monthLabel);
+        }
+      }
+
+      const weekRow = document.createElement('div');
+      weekRow.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px;';
+
+      week.forEach(slot => {
+        if (!slot) {
+          weekRow.appendChild(document.createElement('div')); // empty spacer
+        } else {
+          const dow = new Date(slot.date + 'T12:00').getDay();
+          const card = this.createDayCard(slot, isEnsemble, {
+            isToday:   slot.date === todayStr,
+            isWeekend: dow === 0 || dow === 6
+          });
+          weekRow.appendChild(card);
+        }
+      });
+
+      container.appendChild(weekRow);
     });
 
-    container.appendChild(daysContainer);
     plot.appendChild(container);
   },
 
@@ -297,19 +319,17 @@ window.OverviewPanel = {
    * @param {boolean} isEnsemble - Whether this is ensemble data
    * @returns {HTMLElement} Day card element
    */
-  createDayCard: function(day, isEnsemble) {
+  createDayCard: function(day, isEnsemble, { isToday = false, isWeekend = false } = {}) {
     const card = document.createElement('div');
-    card.style.cssText = `
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      min-width: 140px;
-      max-width: 160px;
-      flex: 0 0 auto;
-      text-align: center;
-      margin-bottom: 12px;
-    `;
+    card.style.cssText = [
+      'border-radius:12px',
+      'padding:12px',
+      'text-align:center',
+      isWeekend ? 'background:rgba(255,243,235,0.95)' : 'background:rgba(255,255,255,0.9)',
+      isToday
+        ? 'box-shadow:0 0 0 2px #007AFF,0 2px 12px rgba(0,122,255,0.2)'
+        : 'box-shadow:0 2px 8px rgba(0,0,0,0.1)',
+    ].join(';');
 
     // Day header
     const dayHeader = document.createElement('div');

@@ -7,24 +7,35 @@ window.ComparePanel = {
 
   // ── Persistent state ────────────────────────────────────────────────────────
   selectedModelIds: ['bestmatch', 'icon_d2_det', 'meteoswiss_icon_ch2'],
-  selectedParams:   ['temperature', 'rain', 'wind', 'uv'],
+  selectedParams:   ['symbols', 'temperature', 'rain', 'wind', 'uv'],
+  showAllModels:    false,
 
   // ── Constants ────────────────────────────────────────────────────────────────
+  DEFAULT_MODEL_IDS: [
+    'bestmatch',
+    'icon_d2_det',
+    'icon_eu_det',
+    'meteoswiss_icon_ch1',
+    'meteoswiss_icon_ch2',
+    'arome_france_hd_det'
+  ],
   MODEL_COLORS: [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
     '#9467bd', '#8c564b', '#e377c2', '#7f7f7f'
   ],
   PARAM_ORDER: [
-    'temperature', 'rain', 'rain_prob', 'wind', 'wind_dir',
+    'symbols', 'temperature', 'rain', 'rain_prob', 'wind', 'wind_dir',
     'uv', 'humidity', 'dewpoint', 'cloud', 'visibility'
   ],
   PARAM_LABELS: {
+    symbols:     '🌤️ Symbols',
     temperature: '🌡️ Temp',  rain: '🌧️ Rain',    rain_prob: '💧 Rain %',
     wind:        '💨 Wind',   wind_dir: '🧭 Dir',  uv: '☀️ UV',
     humidity:    '💦 Humidity', dewpoint: '🌫️ Dew Pt',
     cloud:       '☁️ Clouds',  visibility: '👁 Visibility',
   },
   PARAM_YAXIS_TITLE: {
+    symbols:     'Symbols',
     temperature: 'Temp (°C)', rain: 'Precip (mm)', rain_prob: 'Rain prob (%)',
     wind:        'Wind (km/h)', wind_dir: 'Direction (°)', uv: 'UV Index',
     humidity:    'Humidity (%)', dewpoint: 'Dew point (°C)',
@@ -138,7 +149,18 @@ window.ComparePanel = {
       self.selectedModelIds = [];
       if (window.fetchAndPlot) window.fetchAndPlot();
     }));
-    allModels.forEach(m => {
+
+    // Filter models to display
+    const modelsToRender = allModels.filter(m => {
+      // Always show if showAllModels is true
+      if (self.showAllModels) return true;
+      // Always show if it's currently selected
+      if (self.selectedModelIds.includes(m.id)) return true;
+      // Show default models
+      return self.DEFAULT_MODEL_IDS.includes(m.id);
+    });
+
+    modelsToRender.forEach(m => {
       controlsDiv.appendChild(toggleBtn(
         m.label,
         self.selectedModelIds.includes(m.id),
@@ -150,6 +172,19 @@ window.ComparePanel = {
         }
       ));
     });
+
+    // Add More/Less toggle button
+    if (self.showAllModels) {
+      controlsDiv.appendChild(toggleBtn('– Less', false, () => {
+        self.showAllModels = false;
+        self.renderControls(controlsDiv);
+      }));
+    } else {
+      controlsDiv.appendChild(toggleBtn('+ More', false, () => {
+        self.showAllModels = true;
+        self.renderControls(controlsDiv);
+      }));
+    }
 
     // Separator
     const sep = document.createElement('span');
@@ -292,40 +327,27 @@ window.ComparePanel = {
           displayName = `${model.label} (${formatInitTime(unixTime)})`;
         }
 
-        if (param === 'temperature') {
-          const temp = hourly.temperature_2m || [];
-          traces.push({
-            x: times, y: temp,
-            mode: 'lines',
-            name: displayName,
-            legendgroup: model.id,
-            showlegend,
-            line: { color, width: 2 },
-            yaxis
-          });
-
-          // Weather icons per model, each on its own horizontal line (staggered vertically)
+        if (param === 'symbols') {
           if (window.WeatherIcons && (hourly.weather_code || []).some(c => c != null)) {
             const icons  = window.WeatherIcons.getIcons(hourly.weather_code || []);
             const nModels = compareModels.length;
-            // Spread icon rows evenly within the top band (0.72–0.97), top model first
-            const iconTop    = 0.97;
-            const iconSpread = 0.25;
+            const top = 0.85;
+            const bottom = 0.15;
             const yVal = nModels === 1
-              ? iconTop
-              : iconTop - (modelIdx / (nModels - 1)) * iconSpread;
+              ? 0.5
+              : top - (modelIdx / (nModels - 1)) * (top - bottom);
 
-            // Horizontal guide line behind weather symbols
+            // Horizontal guide line behind weather symbols (fainter color-coded dashed line)
             traces.push({
               x: times,
               y: times.map(() => yVal),
               mode: 'lines',
-              line: { color: color + '70', width: 1.5, dash: 'dash' },
+              line: { color: color + '40', width: 1, dash: 'dash' },
               name: `${displayName} guide`,
               legendgroup: model.id,
               showlegend: false,
               hoverinfo: 'none',
-              yaxis: `y${orderedParams.length + 1}`
+              yaxis
             });
 
             traces.push({
@@ -342,9 +364,22 @@ window.ComparePanel = {
                 return `${displayName}: ${iconSymbol}`;
               }),
               hoverinfo: 'text',
-              yaxis: `y${orderedParams.length + 1}`
+              yaxis
             });
           }
+        }
+
+        if (param === 'temperature') {
+          const temp = hourly.temperature_2m || [];
+          traces.push({
+            x: times, y: temp,
+            mode: 'lines',
+            name: displayName,
+            legendgroup: model.id,
+            showlegend,
+            line: { color, width: 2 },
+            yaxis
+          });
         }
 
         if (param === 'rain') {
@@ -512,6 +547,7 @@ window.ComparePanel = {
     orderedParams.forEach((param, i) => {
       const key = i === 0 ? 'yaxis' : `yaxis${i + 1}`;
       const extra = {};
+      if (param === 'symbols')   { extra.range = [0, 1]; extra.visible = false; }
       if (param === 'uv')        extra.range = [0, 12];
       if (param === 'rain')      extra.rangemode = 'tozero';
       if (param === 'rain_prob') { extra.rangemode = 'tozero'; extra.range = [0, 100]; }
@@ -525,44 +561,33 @@ window.ComparePanel = {
         domain:    domains[i],
         anchor:    'x',
         autorange: !extra.range,
-        showgrid:  true,
+        showgrid:  param !== 'symbols',
         gridcolor: '#f0f0f0',
         zeroline:  (param === 'rain' || param === 'uv' || param === 'rain_prob'),
         ...extra,
       };
     });
 
-    // Invisible overlay axis for weather icons (anchored to temperature row)
-    const tempIdx = orderedParams.indexOf('temperature');
-    if (tempIdx >= 0) {
-      const tempAxisRef = tempIdx === 0 ? 'y' : `y${tempIdx + 1}`;
-      yaxisConfig[`yaxis${n + 1}`] = {
-        overlaying: tempAxisRef,
-        range:      [0, 1],
-        visible:    false,
-        domain:     domains[tempIdx],
-      };
-    }
-
     // xaxis anchors to bottom row
     const bottomRef = n === 1 ? 'y' : `y${n}`;
 
-    // Build legend badges for weather icon rows (if temperature is selected)
+    // Build legend badges for weather icon rows (if symbols is selected)
     const iconAnnotations = [];
-    if (tempIdx >= 0) {
-      const tempDomain = domains[tempIdx];
-      const domainHeight = tempDomain[1] - tempDomain[0];
+    const symbolsIdx = orderedParams.indexOf('symbols');
+    if (symbolsIdx >= 0) {
+      const symbolsDomain = domains[symbolsIdx];
+      const domainHeight = symbolsDomain[1] - symbolsDomain[0];
       
       compareModels.forEach((model, modelIdx) => {
         const nModels = compareModels.length;
-        const iconTop    = 0.97;
-        const iconSpread = 0.25;
+        const top = 0.85;
+        const bottom = 0.15;
         const yVal = nModels === 1
-          ? iconTop
-          : iconTop - (modelIdx / (nModels - 1)) * iconSpread;
+          ? 0.5
+          : top - (modelIdx / (nModels - 1)) * (top - bottom);
           
         // Map to paper coordinate
-        const yp = tempDomain[0] + yVal * domainHeight;
+        const yp = symbolsDomain[0] + yVal * domainHeight;
         const color = colorMap[model.id] || '#333';
         
         iconAnnotations.push({
@@ -587,7 +612,7 @@ window.ComparePanel = {
 
     return {
       width:  window.innerWidth,
-      height: Math.max(window.innerHeight - 150, 350),
+      height: Math.max(window.innerHeight - 150, 120 + n * 130),
       title:  {
         text: `🔀 Compare — ${location ? location.name : ''}`,
         x: 0.05, font: { size: 12 }
@@ -605,17 +630,17 @@ window.ComparePanel = {
       shapes:      [...nightShading, nowLine],
       showlegend:  true,
       legend: {
-        x: 1.02, y: 1.0,
-        xanchor:     'left',
+        x: 0.99, y: 0.99,
+        xanchor:     'right',
         yanchor:     'top',
-        bgcolor:     'rgba(255,255,255,0.85)',
+        bgcolor:     'rgba(255, 255, 255, 0.6)',
         bordercolor: '#ccc',
         borderwidth: 1,
         font:        { size: 11 },
         orientation: 'v',
       },
       annotations: allAnnotations,
-      margin:      { l: 60, r: 150, t: 30, b: 55 },
+      margin:      { l: 60, r: 50, t: 30, b: 55 },
       plot_bgcolor:  'white',
       paper_bgcolor: 'white',
     };

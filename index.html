@@ -72,11 +72,20 @@
       margin-top: 0; /* No margin when controls fade */
       transition: margin-top 0.3s ease;
       position: relative;
+      overflow-y: auto;
     }
 
     #plot.with-controls {
       height: calc(100vh - 80px);
       margin-top: 80px;
+    }
+
+    /* Hide compare controls and make chart full-height when controls are faded out */
+    #controls.fade-out ~ #plot #compare-controls-bar {
+      display: none !important;
+    }
+    #controls.fade-out ~ #plot #compare-chart {
+      height: 100% !important;
     }
 
     /* Fade trigger area */

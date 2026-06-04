@@ -253,7 +253,7 @@ window.OverviewPanel = {
     // Sticky day-name column headers (Mon … Sun)
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const colHeader = document.createElement('div');
-    colHeader.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:6px;position:sticky;top:66px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);z-index:9;padding-bottom:4px;';
+    colHeader.style.cssText = 'display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:6px;position:sticky;top:66px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);z-index:9;padding-bottom:4px;';
     DAY_NAMES.forEach((name, i) => {
       const cell = document.createElement('div');
       cell.style.cssText = `text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${i >= 5 ? '#6366f1' : '#555'};`;
@@ -262,8 +262,8 @@ window.OverviewPanel = {
     });
     container.appendChild(colHeader);
 
-    // Today string (YYYY-MM-DD) for highlighting
-    const todayStr = new Date().toLocaleDateString('sv-SE');
+    // Today string in Berlin timezone (YYYY-MM-DD)
+    const todayStr = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).split(' ')[0];
 
     // Monday-align: find how many empty slots before first forecast day
     // Use UTC noon to get day-of-week — avoids browser timezone ambiguity
@@ -298,7 +298,7 @@ window.OverviewPanel = {
       }
 
       const weekRow = document.createElement('div');
-      weekRow.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px;';
+      weekRow.style.cssText = 'display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:8px;';
       const weekContainsToday = week.some(s => s && s.date === todayStr);
       if (weekContainsToday) weekRow.setAttribute('data-week-today', '');
 
@@ -344,6 +344,8 @@ window.OverviewPanel = {
       'border-radius:12px',
       'padding:12px',
       'text-align:center',
+      'overflow:hidden',
+      'min-width:0',
       isWeekend ? 'background:rgba(238,240,255,0.9)' : 'background:rgba(255,255,255,0.9)',
       isToday
         ? 'box-shadow:0 0 0 2px #007AFF,0 2px 12px rgba(0,122,255,0.2)'

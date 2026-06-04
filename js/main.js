@@ -349,9 +349,7 @@ if (urlParams.panel && panelSelect) {
     console.log("Set panel from URL:", urlParams.panel);
   }
 } else if (panelSelect) {
-  // Set Overview as default panel when no panel is specified in URL
-  panelSelect.value = 'overview';
-  console.log("Set default panel to: overview");
+  panelSelect.value = 'compare';
 }
 
 // ------------------------------

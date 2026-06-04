@@ -820,26 +820,46 @@ viewBtns.forEach(btn => {
 });
 
 // Mobile-specific improvements
+// Handle UI adjustments, orientation changes, resize, and controls visibility toggling
 document.addEventListener('DOMContentLoaded', function() {
+  const controls = document.getElementById('controls');
+  const plot = document.getElementById('plot');
+  const fadeButton = document.getElementById('fade-button');
+  let isControlsVisible = true;
+
+  // Measure the height of the controls panel and adjust plot margins dynamically
+  function adjustPlotMargin() {
+    if (!controls || !plot) return;
+    if (isControlsVisible) {
+      const h = controls.offsetHeight;
+      plot.style.marginTop = h + 'px';
+      plot.style.height = `calc(100vh - ${h}px)`;
+    } else {
+      plot.style.marginTop = '0px';
+      plot.style.height = '100vh';
+    }
+  }
+
   // Handle mobile orientation changes
   window.addEventListener('orientationchange', function() {
     setTimeout(() => {
-      // Re-render the plot with new dimensions
+      adjustPlotMargin();
       if (window.WeatherPlot && window.WeatherPlot.renderWeatherData) {
-        // Trigger a re-plot with current data
         const event = new Event('resize');
         window.dispatchEvent(event);
       }
     }, 500);
   });
 
-  // Handle window resize for mobile
+  // Handle window resize for mobile and comparison chart sizing
   window.addEventListener('resize', function() {
+    adjustPlotMargin();
     const compareChart = document.getElementById('compare-chart');
     if (compareChart && compareChart.classList && compareChart.classList.contains('js-plotly-plot')) {
+      const n = (window.ComparePanel && window.ComparePanel.selectedParams) ? window.ComparePanel.selectedParams.length : 5;
       Plotly.relayout('compare-chart', {
         width: window.innerWidth,
-        height: Math.max(window.innerHeight - 150, 350)
+        height: Math.max(window.innerHeight - 150, 120 + n * 130)
       });
     } else {
       const plotDiv = document.getElementById('plot');
@@ -852,20 +872,17 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   });
-});
-
-// Manual-only controls visibility toggle
-document.addEventListener('DOMContentLoaded', function() {
-  const controls = document.getElementById('controls');
-  const plot = document.getElementById('plot');
-  const fadeButton = document.getElementById('fade-button');
-  let isControlsVisible = true;
 
   function showControls() {
-    controls.classList.remove('fade-out');
-    controls.classList.add('fade-in');
-    plot.classList.add('with-controls');
+    if (controls) {
+      controls.classList.remove('fade-out');
+      controls.classList.add('fade-in');
+    }
+    if (plot) {
+      plot.classList.add('with-controls');
+    }
     isControlsVisible = true;
+    adjustPlotMargin();
     if (fadeButton) {
       fadeButton.textContent = '👁️';
       fadeButton.title = 'Hide Controls';
@@ -874,10 +891,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function hideControls() {
-    controls.classList.remove('fade-in');
-    controls.classList.add('fade-out');
-    plot.classList.remove('with-controls');
+    if (controls) {
+      controls.classList.remove('fade-in');
+      controls.classList.add('fade-out');
+    }
+    if (plot) {
+      plot.classList.remove('with-controls');
+    }
     isControlsVisible = false;
+    adjustPlotMargin();
     if (fadeButton) {
       fadeButton.textContent = '👁️‍🗨️';
       fadeButton.title = 'Show Controls';

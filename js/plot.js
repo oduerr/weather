@@ -173,7 +173,8 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   // Build traces for 3 rows:
   // Row 1: Temperature, Dew Point, and Weather Icons
   const traceTemp = { x: timesLocal, y: temperature, mode: 'lines', name: 'Temperature (°C)', line: { color: 'red' }, yaxis: "y1" };
-  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 2, dash: 'dot' }, opacity: 0.6, yaxis: "y2" };
+  if (window.WeatherPlot._showDewPoint === undefined) window.WeatherPlot._showDewPoint = false;
+  const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 2, dash: 'dot' }, opacity: 0.6, yaxis: "y2", visible: window.WeatherPlot._showDewPoint };
   const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
 
   // Observed temperature traces (Konstanz only): fogcast station + BrightSky
@@ -454,6 +455,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       side: "right",
       anchor: "x",
       color: "blue",
+      visible: window.WeatherPlot._showDewPoint,
       ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
     },
 
@@ -464,9 +466,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", anchor: "x", range: [0, 100], color: "darkred" },
 
     shapes: [...nightShading, shapeNow, ...lastObsShapes],
-    showlegend: false,  // Hide legend
-    annotations: [...weekdayAnnotations, ...lastObsAnnotations]  // ✅ Add weekday labels at noon + last obs
-  }; // End of layout
+    showlegend: false,
+    annotations: [...weekdayAnnotations, ...lastObsAnnotations]
+  };
 
   Plotly.newPlot('plot', allTraces, layout, { displayModeBar: false }).then(() => {
     const plotDiv = document.getElementById('plot');
@@ -475,9 +477,29 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
       window.ViewportPreserver.applyIfPending();
     } else {
-      Plotly.relayout('plot', {
-        'xaxis.range': [startTime, endTime]
+      Plotly.relayout('plot', { 'xaxis.range': [startTime, endTime] });
+    }
+
+    // Small dew point toggle button (only for deterministic models that have traceDew at index 1)
+    if (model.type !== 'ensemble') {
+      const existing = plotDiv.querySelector('#dew-toggle');
+      if (existing) existing.remove();
+      const btn = document.createElement('button');
+      btn.id = 'dew-toggle';
+      const update = () => {
+        const on = window.WeatherPlot._showDewPoint;
+        btn.textContent = on ? '💧 Dew Point ✓' : '💧 Dew Point';
+        btn.style.cssText = 'position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;z-index:10;' +
+          (on ? 'border:1px solid #007AFF;background:#007AFF;color:white;' : 'border:1px solid #bbb;background:white;color:#555;');
+      };
+      update();
+      btn.addEventListener('click', () => {
+        window.WeatherPlot._showDewPoint = !window.WeatherPlot._showDewPoint;
+        Plotly.restyle('plot', { visible: window.WeatherPlot._showDewPoint }, [1]);
+        Plotly.relayout('plot', { 'yaxis2.visible': window.WeatherPlot._showDewPoint });
+        update();
       });
+      plotDiv.appendChild(btn);
     }
   });
 };

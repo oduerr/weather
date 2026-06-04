@@ -123,12 +123,8 @@ function getEnhancedModelLabel(model) {
   return `${model.label} ${typeIcon} (${info.days}d, ${info.category})`;
 }
 const models = [
-  // 1) Machine Learning / AI
-  { id: "ecmwf_aifs_det", label: "🇪🇺 ECMWF AIFS (ML)", model: "ecmwf_aifs025_single", type: "deterministic" },
-  { id: "gfs_graphcast_det", label: "🇺🇸 GFS GraphCast (ML)", model: "gfs_graphcast025", type: "deterministic" },
-
-  // 2) German Models (DWD)
   { id: "bestmatch", label: "🇩🇪 Best Match", model: "best_match", type: "deterministic" },
+  // 2) German Models (DWD)
   { id: "icon_d2_det", label: "🇩🇪 ICON D2 48h", model: "icon_d2", type: "deterministic" },
   { id: "icon_seamless_det", label: "🇩🇪 Seamless", model: "icon_seamless", type: "deterministic" },
   { id: "icon_eu_det", label: "🇩🇪 ICON EU", model: "icon_eu", type: "deterministic" },
@@ -149,6 +145,11 @@ const models = [
   { id: "arpege_europe_det", label: "🇫🇷 ARPEGE Europe", model: "arpege_europe", type: "deterministic" },
   { id: "arpege_world_det", label: "🇫🇷 ARPEGE World", model: "meteofrance_arpege_world", type: "deterministic" },
 
+
+  // 5) German Models (DWD)  // 1) Machine Learning / AI
+  { id: "ecmwf_aifs_det", label: "🇪🇺 ECMWF AIFS (ML)", model: "ecmwf_aifs025_single", type: "deterministic" },
+  { id: "gfs_graphcast_det", label: "🇺🇸 GFS GraphCast (ML)", model: "gfs_graphcast025", type: "deterministic" },
+  
   // 5) Other European & Global Models
   { id: "ecmwf_ifs025_det", label: "🇪🇺 ECMWF IFS", model: "ecmwf_ifs025", type: "deterministic" },
   { id: "gfs_global_det", label: "🇺🇸 GFS Global", model: "gfs_global", type: "deterministic" },

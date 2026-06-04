@@ -365,6 +365,26 @@ updateModelRowVisibility();
 // 3) Fetch & Plot Function
 // ------------------------------
 // Make fetchAndPlot globally accessible for location search integration
+function showForecastError(message) {
+  document.getElementById('forecast-error-banner')?.remove();
+  const banner = document.createElement('div');
+  banner.id = 'forecast-error-banner';
+  banner.style.cssText = [
+    'position:fixed', 'top:80px', 'left:50%', 'transform:translateX(-50%)',
+    'background:#c0392b', 'color:white', 'padding:12px 20px', 'border-radius:8px',
+    'font-size:13px', 'font-weight:bold', 'z-index:500', 'max-width:90vw',
+    'text-align:center', 'box-shadow:0 4px 16px rgba(0,0,0,0.4)', 'line-height:1.5'
+  ].join(';');
+  banner.innerHTML = `⚠️ Open-Meteo forecast unavailable<br><span style="font-weight:normal;font-size:12px">${message}</span><br><span style="font-weight:normal;font-size:11px;opacity:0.85">BrightSky &amp; station data may still show on the Temperature panel</span>`;
+  const close = document.createElement('span');
+  close.textContent = ' ✕';
+  close.style.cssText = 'cursor:pointer;margin-left:10px;opacity:0.8;';
+  close.onclick = () => banner.remove();
+  banner.appendChild(close);
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 15000);
+}
+
 window.fetchAndPlot = async function fetchAndPlot() {
 
 
@@ -469,7 +489,13 @@ window.fetchAndPlot = async function fetchAndPlot() {
 
   try {
     const data = await window.WeatherAPI.getWeatherDataWithFallback(selectedLoc, selectedModel);
-    
+
+    if (data.forecastError) {
+      showForecastError(data.forecastError);
+      return;
+    }
+    document.getElementById('forecast-error-banner')?.remove();
+
     // Get the selected panel from the dropdown
     const panelSelect = document.getElementById('panelSelect');
     const selectedPanel = panelSelect ? panelSelect.value : 'overview';
@@ -493,7 +519,7 @@ window.fetchAndPlot = async function fetchAndPlot() {
     // Data updated successfully (status element removed to save space)
   } catch (err) {
     console.error("Error fetching data:", err);
-    // Error status removed to save space - check console for errors
+    showForecastError(err.message || 'Unknown error — check your connection.');
   }
 };
 

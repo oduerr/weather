@@ -470,15 +470,17 @@ window.WeatherAPI.getForecastData = async function(location, model) {
 
   try {
     const response = await fetch(apiUrl + params.toString());
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      if (response.status === 429) throw new Error('Rate limit exceeded (429) — try again in a few minutes.');
+      if (response.status >= 500) throw new Error(`Open-Meteo server error (${response.status}).`);
+      throw new Error(`Open-Meteo returned HTTP ${response.status}. ${body.slice(0, 120)}`);
+    }
     const data = await response.json();
-    
-    // Store new data in cache
-    cachedData[cacheKey] = {
-      data: data,
-      timestamp: Date.now()
-    };
+    if (data.error) throw new Error(`Open-Meteo: ${data.reason || JSON.stringify(data)}`);
+
+    cachedData[cacheKey] = { data, timestamp: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cachedData));
-    
     return data;
   } catch (error) {
     console.error("Error fetching forecast data:", error);
@@ -619,32 +621,32 @@ window.WeatherAPI.getModelMetadata = async function(model) {
  * @returns {Promise<Object>} Weather data object with forecast and observations
  */
 window.WeatherAPI.getWeatherData = async function(location, model) {
+  // Observations are independent — always fetch, even if forecast fails
+  const observationPromise = window.WeatherAPI.getObservationData(location)
+    .catch(err => { console.warn("Observation data failed:", err); return null; });
+
+  let forecastData = null;
+  let forecastError = null;
   try {
-    // Get forecast and observation data in parallel
-    const [forecastData, observationData] = await Promise.all([
-      window.WeatherAPI.getForecastData(location, model),
-      window.WeatherAPI.getObservationData(location)
-    ]);
-    
-    // Also load model metadata quietly
+    forecastData = await window.WeatherAPI.getForecastData(location, model);
     try {
       const metadata = await window.WeatherAPI.getModelMetadata(model);
-      if (metadata) {
-        forecastData.model_metadata = metadata;
-      }
+      if (metadata) forecastData.model_metadata = metadata;
     } catch (metaErr) {
       console.warn("Could not load model metadata:", metaErr);
     }
-    
-    // Return unified data structure
-    return {
-      forecast: forecastData,
-      observations: observationData
-    };
   } catch (error) {
-    console.error("Error fetching weather data:", error);
-    throw error;
+    forecastError = error;
+    console.error("Open-Meteo forecast failed:", error);
   }
+
+  const observationData = await observationPromise;
+
+  return {
+    forecast: forecastData,
+    observations: observationData,
+    forecastError: forecastError ? forecastError.message : null
+  };
 }
 
 /**
@@ -671,20 +673,6 @@ window.WeatherAPI.loadFixtureData = async function() {
  * @param {boolean} useFixture - Whether to use fixture data instead of live API
  * @returns {Promise<Object>} Weather data object
  */
-window.WeatherAPI.getWeatherDataWithFallback = async function(location, model, useFixture = false) {
-  if (useFixture) {
-    return await window.WeatherAPI.loadFixtureData();
-  }
-  
-  try {
-    return await window.WeatherAPI.getWeatherData(location, model);
-  } catch (error) {
-    console.warn("Failed to fetch live data, trying fixture data...");
-    try {
-      return await window.WeatherAPI.loadFixtureData();
-    } catch (fixtureError) {
-      console.error("Both live and fixture data failed:", fixtureError);
-      throw error;
-    }
-  }
+window.WeatherAPI.getWeatherDataWithFallback = async function(location, model) {
+  return await window.WeatherAPI.getWeatherData(location, model);
 }

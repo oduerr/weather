@@ -812,6 +812,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById("panelSelect").addEventListener("change", function(event) {
       updateModelRowVisibility();
+      if (window.ViewportPreserver) window.ViewportPreserver.capture();
       const currentState = getCurrentAppState();
       updateUrlWithAppState(
         currentState.location,

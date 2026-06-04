@@ -9,7 +9,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 - **Type**: Static single‑page web app (no build, opens via file:// or any static host).
 - **Stack**: Vanilla HTML/CSS/JS with Plotly.js; global objects instead of ES modules.
 - **Entry**: `index.html` loads scripts in order; no bundler.
-- **Key globals**: `window.WeatherAPI`, `window.WeatherPlot`, `window.VisRegistry`, `window.ViewportPreserver`, `window.LocationPicker`, `window.LocationSearch`, `window.SwipeNavigation`.
+- **Key globals**: `window.WeatherAPI`, `window.WeatherPlot`, `window.ComparePanel`, `window.OverviewPanel`, `window.VisRegistry`, `window.LocationPicker`, `window.LocationSearch`, `window.SwipeNavigation`, `window._savedXRange`, `window.applyActiveView`.
 - **Primary DOM**: `#controls` (fixed top control bar), `#fade-button` (manual toggle), `#plot` (content area).
 - **URL contracts**: Full app state encoded in query params (`lat`, `lon`, `name`, `model`, `panel`, `view`).
 
@@ -43,9 +43,18 @@ This file captures project knowledge and guardrails so agents can make safe, hig
   - Uses Open‑Meteo Geocoding API. Keyboard navigation and selection.
   - Navigates via the canonical URL updater and triggers `fetchAndPlot`.
 
+- `js/comparePanel.js` → Compare panel (multi-model overlay)
+  - Fetches multiple models in parallel; state persists across re-renders.
+  - Symbol size restyles dynamically via `Plotly.restyle` when view range changes.
+
+- `js/overviewPanel.js` → Calendar overview panel
+  - Async render; fetches BrightSky past days for current week in parallel.
+  - 7-column Mon–Sun grid; `min-width: 980px` container + `#plot overflow-x: auto`.
+
 - `js/swipeNavigation.js` → Swipe/keyboard panning
-  - Horizontal swipes outside the Plotly chart area pan by ~0.75× current range.
-  - Arrow left/right keys pan similarly; respects data boundaries from `#plot` or `#compare-chart` attributes depending on the active panel.
+  - Horizontal swipe left → later time (map-drag convention); up/down cycles panels.
+  - Arrow left/right keys pan; always active (no controls-hidden gate).
+  - Every range change saves to `window._savedXRange`; `window.applyActiveView()` restores after render.
 
 ---
 
@@ -54,7 +63,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 - Query params define the entire app state:
   - `lat`, `lon`, `name` (location)
   - `model` (one of `models[].id` in `main.js`)
-  - `panel` (`temperature`, `uv_wind`, `actuals`)
+  - `panel` (`compare`, `temperature`, `uv_wind`, `overview`, `actuals`) — default `compare`
   - `view` (`1d`, `2d`, `5d`, `all`)
 - Always use `updateUrlWithAppState()` when programmatically changing selections to keep history, back/forward, and deep links consistent.
 - `popstate` handler restores selections and triggers a re‑render; `restoreViewFromUrl(view)` handles `view` after render.
@@ -64,7 +73,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 ## Plot patterns and guardrails
 
 - Always set the active plot attributes `data-start-time` and `data-end-time` after computing the domain; view buttons, swipe, and navigation depend on them. (The active plot element is `#compare-chart` in compare panel mode, and `#plot` in other modes).
-- Use `ViewportPreserver.capture()` before operations that rebuild Plotly and `ViewportPreserver.applyIfPending()` after render to keep zoom/pan across model switches.
+- Use `window.applyActiveView()` inside every panel's `Plotly.newPlot().then()` to restore the saved range. `window._savedXRange` is set by all range-changing functions (view buttons, pan, swipe).
 - On mobile, Plotly toolbar is hidden; layout sizes depend on window size. Relayout on `resize` and orientation changes is already wired.
 - The `actuals` panel must not create a Plotly plot. It renders a simple table under `#plot`.
 
@@ -72,8 +81,9 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 ## Panels and extension points
 
-- Add a new panel by registering a function in `window.VisRegistry` and exposing it in the `#panelSelect` options in `index.html`.
-- Panel renderer signature: `(data, location, model, config)`.
+- Add a new panel by registering a function in `window.VisRegistry` and exposing it in the `#panelSelect` options in `index.html`. Also add to `PANELS` array and `PANEL_CONFIG` in `main.js`, and to the `validPanels` list.
+- Panel renderer signature: `(data, location, model, config)` — may be `async`.
+- The Overview Table panel (`overviewTable.js`) has been removed; replaced by the calendar Overview panel.
 - Use existing render helpers in `WeatherPlot`; ensure to set domain attributes and to integrate with `ViewportPreserver` if you instantiate Plotly.
 - Respect the `panel` query param and ensure `updateUrlWithAppState()` is called when panel changes.
 

@@ -1,458 +1,118 @@
-# Weather Application - Development Documentation
+# Development Notes
 
-## 📋 Project Overview
+## Architecture
 
-**Weather** is a static web application for visualizing weather forecast data with ensemble support. The application fetches data from the Open-Meteo API and displays it using Plotly.js charts.
+Static single-page app — vanilla HTML/CSS/JS, no build step, no bundler. Global objects instead of ES modules to maintain `file://` compatibility.
 
-### 🎯 Key Features
-- **Multi-location support** (Konstanz, Zurich, Espoo)
-- **Multiple weather models** (ICON D2, MeteoSwiss, GFS)
-- **Ensemble data visualization** with mean and mode calculations
-- **Real-time weather data** from Konstanz University
-- **File:// protocol compatibility** (no server required)
-- **Modular JavaScript architecture**
-- **Python data generation tools**
+### File structure
 
-## 🏗️ Architecture
-
-### File Structure
 ```
 weather/
-├── index.html                 # Main HTML file
+├── index.html              # Entry point: styles, controls HTML, script tags
+├── radar.html              # Standalone animated rain radar (Leaflet + RainViewer)
 ├── js/
-│   ├── api.js                # API module (data fetching, caching)
-│   ├── plot.js               # Plotting module (charts, ensemble calculations)
-│   ├── visRegistry.js        # Visualizer registry (panel system)
-│   └── main.js               # Main orchestration module
-├── fixtures/                 # Weather data fixtures for development
-│   ├── konstanz_weather.json
-│   ├── konstanz_ensemble.json
-│   ├── zurich_weather.json
-│   └── espoo_weather.json
-├── fetch_weather_data.py     # Python script for generating fixtures
-├── requirements.txt          # Python dependencies
-├── README_weather_fetcher.md # Python script documentation
-└── specs/
-    └── refactor_requirememts.md # Original refactoring requirements
+│   ├── api.js              # Data layer: Open-Meteo, BrightSky, fogcast station
+│   ├── plot.js             # Temperature and UV/Wind Plotly panels
+│   ├── comparePanel.js     # Compare panel (multi-model overlay)
+│   ├── overviewPanel.js    # Calendar overview panel
+│   ├── visRegistry.js      # Panel router + actuals panel
+│   ├── main.js             # Orchestration, URL state, event handlers
+│   ├── locationPicker.js   # Map picker modal (Leaflet loaded on-demand)
+│   ├── locationSearch.js   # Geocoding search modal
+│   ├── swipeNavigation.js  # Touch swipe + keyboard pan
+│   └── weatherIcons.js     # WMO code → emoji mapping
+└── AGENTS.md               # Architecture notes for AI coding assistants
 ```
 
-### Module Architecture
-
-#### 1. **API Module** (`js/api.js`)
-- **Global Object**: `window.WeatherAPI`
-- **Functions**:
-  - `fetchKonstanzWeather(callback)` - Real-time Konstanz data
-  - `getWeatherData(location, model)` - Open-Meteo API calls with caching
-  - `loadFixtureData(location, model)` - Fallback to fixture data
-  - `getWeatherDataWithFallback(location, model)` - Main data access function
-
-#### 2. **Plot Module** (`js/plot.js`)
-- **Global Object**: `window.WeatherPlot`
-- **Functions**:
-  - `createContinuousEnsembleTraces(hourly, variable, yaxis, color)` - Ensemble mean traces
-  - `calculateEnsembleMode(hourly, variable_name)` - **NEW**: Ensemble mode calculation
-  - `renderWeatherData(data, location, model)` - Main plotting function
-  - `adjustViewRange(days)` - Time range adjustment
-
-#### 3. **Visualizer Registry** (`js/visRegistry.js`)
-- **Global Object**: `window.VisRegistry`
-- **Functions**:
-  - `renderPanel(panelName, data, location, model, config)` - Panel rendering
-  - `getAvailablePanels()` - List available panels
-  - `hasPanel(panelName)` - Check panel availability
-
-#### 4. **Main Module** (`js/main.js`)
-- **Functions**:
-  - `fetchAndPlot()` - Main orchestration function
-  - `processWeatherData(data, selectedLoc, model)` - Data processing
-  - Event handlers for UI interactions
-
-## 🔧 Technical Implementation
-
-### Data Flow
-1. **User Selection** → Location and model selection
-2. **API Call** → `window.WeatherAPI.getWeatherDataWithFallback()`
-3. **Data Processing** → Fallback to fixtures if API unavailable
-4. **Visualization** → `window.VisRegistry.renderPanel()` or direct plotting
-5. **Chart Rendering** → Plotly.js with ensemble traces
-
-### Caching Strategy
-- **Local Storage**: 1-hour cache for API responses
-- **Cache Key**: `${latitude},${longitude},${modelId}`
-- **Fallback**: Fixture data for offline development
-
-### Ensemble Data Processing
-- **Mean Calculation**: Average across ensemble members
-- **Mode Calculation**: **NEW** - Most frequent weather code
-- **Support**: Temperature, humidity, precipitation, cloud cover, weather codes
-
-## 🆕 Recent Features (Latest Refactoring)
-
-### 1. **Ensemble Weather Code Mode Calculation**
-```javascript
-// New function in js/plot.js
-window.WeatherPlot.calculateEnsembleMode = function(hourly, variable_name) {
-  // Calculates most frequent weather code across ensemble members
-  // Returns array of mode values for each time step
-}
-```
-
-**Usage**:
-```javascript
-const weatherCodeMode = window.WeatherPlot.calculateEnsembleMode(hourly, "weather_code");
-```
-
-### 2. **Time Axis Bug Fix**
-- **Problem**: Initial view showed empty days beyond data range
-- **Solution**: Automatic range adjustment after plot creation
-- **Implementation**: `Plotly.newPlot().then()` with `relayout()`
-
-### 3. **Weather Code Support in Ensemble API**
-- **Added**: `"weather_code"` to ensemble API calls
-- **Updated**: Python script and API module
-- **Result**: Ensemble weather code mode visualization
-
-### 4. **Modular Architecture**
-- **Separation**: Data fetching, plotting, and UI orchestration
-- **Compatibility**: File:// protocol support (no server required)
-- **Extensibility**: Visualizer registry for future panels
-
-## 🐍 Python Development Tools
-
-### Weather Data Fetcher (`fetch_weather_data.py`)
-```python
-# Generate deterministic weather data
-fetch_weather_data_to_json(
-    latitude=47.6952, 
-    longitude=9.1307, 
-    model="icon_d2",
-    output_file="fixtures/konstanz_weather.json"
-)
-
-# Generate ensemble weather data
-fetch_ensemble_data_to_json(
-    latitude=47.6952, 
-    longitude=9.1307, 
-    model="icon_d2",
-    output_file="fixtures/konstanz_ensemble.json"
-)
-```
-
-**Features**:
-- Multiple location support
-- Deterministic and ensemble models
-- Automatic fixture generation
-- Metadata inclusion
-
-## 🎨 UI Components
-
-### Chart Layout
-- **3-Row Grid**: Temperature/Humidity, Precipitation, Cloud Cover
-- **Multiple Y-Axes**: Independent scaling for different variables
-- **Weather Icons**: Emoji representation of weather codes
-- **Night Shading**: Automatic day/night visualization
-- **Ensemble Traces**: Mean and mode calculations
-
-### Interactive Elements
-- **Location Selector**: Dropdown with predefined locations
-- **Model Selector**: Weather model selection
-- **View Controls**: 2d, 5d, All buttons for time range
-- **Real-time Updates**: Konstanz University temperature display
-
-## 🔄 Development Workflow
-
-### 1. **Local Development**
-```bash
-# No server required - open directly in browser
-open index.html
-```
-
-### 2. **Data Generation**
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Generate new fixtures
-python fetch_weather_data.py
-```
-
-### 3. **Code Structure**
-- **Global Objects**: Avoid ES modules for file:// compatibility
-- **Error Handling**: Graceful fallbacks to fixture data
-- **Caching**: Local storage for API responses
-- **Modularity**: Clear separation of concerns
-
-## 🐛 Known Issues & Solutions
-
-### 1. **Time Axis Range** ✅ FIXED
-- **Issue**: Initial view showed empty days
-- **Solution**: Automatic range adjustment after plot creation
-
-### 2. **ES Module Compatibility** ✅ SOLVED
-- **Issue**: ES modules don't work with file:// protocol
-- **Solution**: Global objects (`window.WeatherAPI`, etc.)
-
-### 3. **API Availability** ✅ HANDLED
-- **Issue**: API might be unavailable
-- **Solution**: Fallback to fixture data
-
-## 📊 Data Sources
-
-### Open-Meteo API
-- **Base URL**: `https://api.open-meteo.com/v1/forecast`
-- **Ensemble URL**: `https://ensemble-api.open-meteo.com/v1/ensemble`
-- **Models**: ICON D2, MeteoSwiss, GFS
-- **Variables**: Temperature, humidity, precipitation, weather codes, etc.
-
-## 🚀 Deployment
-
-### Static Hosting
-- **No Server Required**: Works with file:// protocol
-- **CDN Compatible**: Can be hosted on any static hosting service
-- **CORS Free**: No cross-origin issues
-
-### File Structure for Deployment
-```
-deployment/
-├── index.html
-├── js/
-│   ├── api.js
-│   ├── plot.js
-│   ├── visRegistry.js
-│   └── main.js
-└── fixtures/ (optional - for offline mode)
-```
-
-## 🔮 Future Enhancements
-
-### Planned Features
-1. **Additional Panels**: Wind, pressure, UV index
-2. **Custom Locations**: User-defined coordinates
-3. **Data Export**: CSV/JSON download
-4. **Mobile Optimization**: Responsive design improvements
-5. **Advanced Ensembles**: Probability calculations
-
-### Architecture Extensions
-1. **Plugin System**: Third-party visualizers
-2. **Configuration UI**: Dynamic panel management
-3. **Data Sources**: Additional weather APIs
-4. **Real-time Updates**: WebSocket integration
-
-## 📝 Development Notes
-
-### Code Style
-- **ES6+**: Modern JavaScript features
-- **JSDoc**: Function documentation
-- **Error Handling**: Comprehensive try-catch blocks
-- **Console Logging**: Development debugging
-
-### Performance Considerations
-- **Lazy Loading**: Data fetched on demand
-- **Caching**: Local storage for API responses
-- **Efficient Rendering**: Plotly.js optimization
-- **Memory Management**: Proper cleanup of event listeners
-
-### Testing Strategy
-- **Manual Testing**: Browser-based testing
-- **Fixture Data**: Consistent test data
-- **Fallback Testing**: Offline mode verification
-- **Cross-browser**: Chrome, Firefox, Safari compatibility
-
-
-### Issue 1 Remove automatic panel removal
-Issue: The controls panel automatically fades out after 3 seconds of inactivity, which can be disruptive to users who want to keep the controls visible.
-Current Behavior:
-Controls automatically hide after 3 seconds of no interaction
-Multiple auto-hide triggers: mouse leave, scroll, window focus changes
-Complex timing logic that can be confusing
-Desired Behavior:
-Controls visibility should ONLY change when the fade button is explicitly clicked
-Remove all automatic hiding/showing logic
-Keep the fade button always accessible (fixed position, top-right)
-Simple toggle: visible ↔ hidden
-Implementation Notes:
-✅ Fade button moved to fixed position (top-right corner)
-✅ Button styling updated for better accessibility
-❌ Need to remove auto-hide logic from js/main.js
-❌ Simplify fade controls to only respond to button clicks
-❌ Remove event listeners for mouse leave, scroll, focus changes
-Files to Modify:
-js/main.js - Remove automatic fade logic, keep only button toggle
-index.html - Fade button positioning and styling ✅ COMPLETED
-Status: Partially implemented - UI changes complete, logic cleanup needed
-The issue is now much clearer! You've completed the UI part (moving the fade button to a fixed position), but you still need to clean up the automatic fade logic in the JavaScript code to make it truly "manual only" as intended.
-
-
-### Feature Request 1: One Day View Button
-**Purpose**: Allow users to quickly switch to viewing a single day of weather data 
-**Location**: Add button to the controls panel, next to existing time range controls. Name it "1d"
-**Behavior**: When clicked, adjusts the plot to show data for the current day (00:00-23:59) and up to 4am the next day.
-**User Benefit**: Quick access to detailed daily view without manually adjusting time ranges
-
-### Issue 2 
-Fade button is not working as expected, it not visible anymore.
-
-
-
-### Feature Request 2: Numerical Actuals (Observed vs Forecast)
-Purpose: Show key weather values as numbers (no graphs), comparing latest observed values from each source with the current forecast.
-Location: Add a third panel option named actuals (label: “📍 Actuals”) in the panelSelect.
-Scope (metrics):
-Air temperature (°C)
-Water temperature (°C, if available; typically station only)
-Wind speed (km/h), wind gust (km/h), wind direction (°)
-UV index
-Precipitation (last hour, mm; if available) and/or precipitation probability next hour (%)
-Cloud cover (%)
-Data sources:
-Observed A: Konstanz Weather Station (if selected location supports it)
-Observed B: BrightSky (latest historical observation)
-Forecast: Selected model’s current-hour forecast (Open‑Meteo)
-Data selection rules:
-Observed values: Use each source’s most recent sample within the last 6 hours. If none, show “N/A”.
-Forecast values: Use the value for the current local hour (Europe/Berlin). If between steps, use the nearest step.
-Show each observed source on its own row; do not merge sources.
-Layout:
-A compact grid/table:
-Columns: Metric | Observed (Station) | Observed (BrightSky) | Forecast (Model)
-Rows: One per metric listed in Scope.
-Show units inline (e.g., “12.3 °C”).
-Show per-row “as of” timestamps for observed sources (e.g., “last obs 13:20”); show model id/label for forecast.
-If a metric is not provided by a source, display “N/A”.
-Behavior:
-No Plotly chart in this panel; render simple DOM elements in #plot.
-Respect current selection (location + model).
-Update whenever a new fetch completes (same cadence as other panels).
-
-Accessibility/UX:
-Mobile-friendly, readable font, clear column headings.
-Use subtle color tags to distinguish Observed vs Forecast columns; avoid excessive styling.
-Acceptance criteria:
-Selecting “📍 Actuals” shows a numbers-only view with two observed rows (when available) and one forecast column.
-Values populate correctly from each source or show “N/A” when missing.
-Timestamps for observed data are visible and correct; model label is shown for forecast.
-No Plotly toolbar appears; the panel does not instantiate a chart.
-The previous FR2 was ambiguous; this version specifies a numbers-only “Actuals” panel, per-source observed rows, and a forecast column, with concrete data selection and layout.
-
-
-### Feature Request 3: Preserve Zoom Level When Switching Models
-
-Purpose:
-Keep the current zoom/pan level in the Plotly charts when switching between different weather models, instead of resetting.
-
-Current Behavior:
-	•	When a user zooms or pans to a specific time range and then switches the weather model, the chart resets .
-	•	This forces the user to manually re-zoom after each model change.
-
-Desired Behavior:
-	•	Store the current Plotly x-axis and y-axis ranges before switching models.
-	•	After the new model data is loaded and plotted, reapply the stored ranges.
-	•	If the stored range is partially outside the new data’s domain, clamp to the available range while keeping the zoom scale consistent.
-  * Still keep the current behavior where the zoom is resetted when switching to different days via the buttons.
-
-
-  ### Feature Request 4: 
-  - At the screenshot after the last entry, add a entry pick location from map.
-
-  - This should open a map with a marker on the current location. The user should be able to navigate the map by panning and zooming. 
-
-  - The user should then be able to pick either the current location or any other location on that map and get the weather request by calling the weather app with the new location, like this:
-  https://oduerr.github.io/weather/?lat=52.5200&lon=13.4050&name=Berlin
-  Instead of berlin we would see current location.
-
-  By implementing the requirement be sure to add a new .js file and only do minimal changes at the existing code. This can be done by calling the weather app with the location as described above.
-
-  ### Feature Request 5:
-  - Swiping to the left or to the right should move forward of 1.5 times the current range of the x-axis. Since there are plotly graphs, be sure that you swipes are only counting if you are not in the area of the plotly graphs. So if you are above or below this gesture should work. Alternatively, it should also work when you press the left and right key. 
-  - Keep the changes minimal to the existing code. In doubt, add a new component.
-  -  
-
-### Task 7: Feature Request 6  Add "Overview" Panel (with Ensemble Uncertainty)
-
-**Goal**
-Provide a compact at-a-glance daily view (morning / midday / evening) showing icon, temperature, rain probability, and—if an ensemble is selected—uncertainty and consensus.
-
-### Task: Add "Overview" Panel (with Ensemble Uncertainty and Daily Min/Max)
-
-**Goal**
-Provide a compact at-a-glance daily view (morning / midday / evening) showing icon, temperature, rain probability, and—if an ensemble is selected—uncertainty and consensus. Each day also shows the daily minimum and maximum temperature.
+### Key globals
+
+| Global | Module | Purpose |
+|---|---|---|
+| `window.WeatherAPI` | `api.js` | Fetch, cache, process all data |
+| `window.WeatherPlot` | `plot.js` | Temperature + UV/Wind panels |
+| `window.ComparePanel` | `comparePanel.js` | Multi-model compare panel |
+| `window.OverviewPanel` | `overviewPanel.js` | Calendar overview panel |
+| `window.VisRegistry` | `visRegistry.js` | Panel routing |
+| `window.SwipeNavigation` | `swipeNavigation.js` | Swipe + keyboard nav |
+| `window._savedXRange` | `main.js` | Persists exact x-axis range across panel switches |
+| `window.applyActiveView` | `main.js` | Applies saved range after any panel renders |
 
 ---
 
+## Data flow
 
-#### 1) UI integration
-- Add `"Overview"` to `#panelSelect`, **after "Temperature" and before "UV/Wind"**.
-- Respect `panel=overview` in the URL param system (update on change; deep-linkable).
+```
+User action
+    → fetchAndPlot() [main.js]
+        → WeatherAPI.getWeatherDataWithFallback(location, model)
+            → getForecastData()       [Open-Meteo, cached 1h]
+            → getObservationData()    [BrightSky + fogcast, Konstanz only]
+        → VisRegistry.renderPanel(panel, data, location, model, config)
+            → panel-specific render function
+                → applyActiveView()   [restores saved x-axis range]
+```
 
-#### 2) Layout & content
-- One **card/row per forecast day** (today → end of model horizon).
-- For each day show:
-  - **Daily minimum and maximum temperatures**:
-    - Deterministic: single values (`Min 8 °C / Max 17 °C`).
-    - Ensemble: mean ± 1 SD (`Min 8 ± 1 °C / Max 17 ± 2 °C`).
-    - Position: at the **top** of the day card, before the time slices.
-  - **Three time slices**:
-    - Morning ≈ 06:00
-    - Midday ≈ 12:00
-    - Evening ≈ 21:00
-    - For each slice display:
-      1) **Weather symbol** (existing icon set).
-      2) **Temperature (°C)**  
-         - Deterministic: round to nearest integer.  
-         - Ensemble: **mean ± 1 SD**. *(Use SD, not SE.)*
-      3) **Rain probability (%)**
-         - Deterministic: direct model output if available; else derive as in Rain panel.
-         - Ensemble: mean of member probabilities if available; else proportion of members above threshold (e.g., >0.1 mm).  
-      4) **Ensemble consensus badge** (only for ensembles): majority symbol with agreement count, e.g. ☀️ `14/20`.
+---
 
-#### 3) Deterministic vs ensemble behavior
-- Deterministic: temp values only; no ±SD, no consensus badge.
-- Ensemble: temp values as mean ± SD; consensus badge shown.
+## Panels
 
-#### 4) Data selection rules
-- Slice hours: nearest forecast step to 06/12/21, tolerance ±2h. If none, show `—`.
-- Daily min/max:
-  - Deterministic: min/max across the day from model values.
-  - Ensemble: mean of member min/max values, plus SD across members.
+### Compare (`comparePanel.js`)
+Default panel. Fetches multiple models in parallel. State (`selectedModelIds`, `selectedParams`, `showAllModels`, `showAllParams`) persists across re-renders. Symbol size adjusts dynamically with view range (1d→26px, 2d→20px, 5d→13px, all→9px).
 
-#### 5) Styling (compact & readable)
-- Grid/table that **fits 3–4 days on mobile without scrolling**.
-- Hierarchy:
-  - Min/Max line in smaller text at top of card.
-  - Slice rows with large icon, temp ± SD, rain prob, consensus badge.
-- Touch targets ≥44px; no Plotly in this panel.
+### Temperature / UV & Wind (`plot.js`)
+Plotly multi-subplot charts. Compact layout applied automatically when `window.innerWidth < 768` (removes axis titles, tightens margins). Dew point toggle in controls bar (temperature panel only). Wind direction shown as Unicode arrows (↑↗→↘↓↙←↖) on the wind speed trace.
 
-#### 6) Extensibility hooks
-- Implement `OverviewPanel.render(data, location, model, config)` and register via `VisRegistry`.
-- Provide helper: `formatOverviewSlice()` returning `{ icon, tempMean, tempSD?, rainProb, consensusCount?, consensusTotal? }`.
-- Place constants (`sliceHours`, precipThreshold) in `OVERVIEW_CONFIG`.
+### Overview (`overviewPanel.js`)
+Async render — fetches BrightSky historical data for past days of the current week in parallel with the forecast render. Calendar grid uses `repeat(7, minmax(0, 1fr))` columns; container has `min-width: 980px` so `#plot` handles horizontal scroll on mobile.
 
-#### 7) URL/state
-- Ensure `panel=overview` round-trips via `updateUrlWithAppState()` and `popstate`.
-- Respect `view` buttons (1d/2d/5d/all) to limit days shown.
+### Actuals (`visRegistry.js`)
+Pure DOM, no Plotly. Renders a comparison table: Observed (fogcast station) | Observed (BrightSky) | Forecast.
 
-## 8) Acceptance criteria
-- "Overview" appears in the dropdown between Temperature and UV/Wind.
-- Each day shows:
-  - Daily Min/Max line at the top.
-  - Three slices (06/12/21) with icon, temp (±SD if ensemble), rain prob, and consensus badge (if ensemble).
-- Ensemble-only features (±SD, consensus) are hidden for deterministic models.
-- Layout is compact, mobile-friendly, and consistent with existing style.
+---
 
+## View range persistence
 
-## Task 7 Polishinh
-- The current day is twice shown (screenshot)
-- Fix trace log
-plotly-2.27.0.min.js:8 Uncaught TypeError: Cannot read properties of undefined (reading '_guiEditing')
-X @ plotly-2.27.0.min.js:8
-H @ plotly-2.27.0.min.js:8
-(anonymous) @ main.js:625Understand this error
-plotly-2.27.0.min.js:8 Uncaught TypeError: Cannot read properties of undefined (reading '_guiEditing')
-X @ plotly-2.27.0.min.js:8
-H @ plotly-2.27.0.min.js:8
-(anonymous) @ plot.js:498
-(anonymous) @ main.js:613Understand this error
-2plotly-2.27.0.min.js:8 Uncaught TypeError: Cannot read properties of undefined (reading '_guiEditing')
-- Irrespective of the setting the maximum of possible days should be shown.
-- If in ensemble mode the the daily maximum is the maximum average of the ensemble members +- 1 sd
-- Make this panel the default panel when the user opens the app and no panel is selected via the url parameter.
+`window._savedXRange = { start, end }` is set by every function that changes the x-axis range:
+- `WeatherPlot.adjustViewRange` / `viewOneDay`
+- `ComparePanel.relayoutView` / `viewAll` / `animateRange`
+- `SwipeNavigation.panTime`
+
+After each panel renders, `window.applyActiveView()` clamps the saved range to the new panel's data boundaries and calls `Plotly.relayout`.
+
+---
+
+## Observations (Konstanz only)
+
+| Source | Fields used | Notes |
+|---|---|---|
+| fogcast station | `temperature`, `water_temperature` | Hourly averages; fetched from 2h before UTC midnight to cover Berlin midnight |
+| BrightSky (DWD) | `temperature`, `wind_speed/gust/direction`, `humidity`, `precipitation_10`, `pressure_msl`, `icon` | Times converted to Europe/Berlin; `tz=Europe/Berlin` passed to API |
+
+BrightSky also used in the Overview panel to fill past week days with observed tiles.
+
+---
+
+## Error handling
+
+Open-Meteo failures show a red dismissible banner. Observations (BrightSky, fogcast) are fetched independently and fail silently — the forecast still renders.
+
+---
+
+## Caching
+
+Forecast cache key: `${lat},${lon},${model.id}` — 1 hour TTL in `localStorage`. Model metadata cached separately per model with 1 hour TTL.
+
+---
+
+## Mobile layout
+
+- Controls bar: 2 rows (row 1: location + radar + view buttons + panel; row 2: model, hidden for Compare)
+- `compact = window.innerWidth < 768`: removes axis titles, shortens tick format, tightens margins
+- `dragmode: false` in all Plotly layouts — prevents accidental zoom on touch
+- Swipe left/right pans time; swipe up/down cycles panels (always active)
+
+---
+
+## Keyboard shortcuts
+
+`1/2/5/a` view range · `t/u/c/o` panels · `r` radar · `←/→` pan · `↑/↓` panels · `Esc` toggle controls · `?` help overlay

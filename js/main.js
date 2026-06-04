@@ -403,6 +403,10 @@ function toggleHelpOverlay() {
     html += '</table></div>';
   });
 
+  html += '<div style="border-top:1px solid #eee;margin-top:12px;padding-top:10px;text-align:center;font-size:12px;color:#888;">'
+       + '<a href="https://github.com/oduerr/weather" target="_blank" rel="noopener" style="color:#007AFF;text-decoration:none;">⬡ GitHub — oduerr/weather</a>'
+       + '</div>';
+
   box.innerHTML = html;
   overlay.appendChild(box);
   document.body.appendChild(overlay);

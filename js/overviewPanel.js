@@ -26,11 +26,10 @@ window.OverviewPanel = {
    * @param {Object} model - Model object with id, type, label
    * @param {Object} config - Panel configuration
    */
-  render: function(data, location, model, config = {}) {
+  render: async function(data, location, model, config = {}) {
     const plot = document.getElementById('plot');
     if (!plot) return;
 
-    // Clear any existing Plotly chart/DOM
     if (window.Plotly && plot.classList && plot.classList.contains('js-plotly-plot')) {
       try { Plotly.purge(plot); } catch (_) {}
     }
@@ -46,17 +45,27 @@ window.OverviewPanel = {
     const daily = forecast.daily || {};
     const isEnsemble = model.type === 'ensemble';
 
-    // Process data by days
     const processedDays = this.processOverviewData(hourly, daily, isEnsemble);
-    
-    // Remove duplicate days (fix the "today twice" issue)
-    const uniqueDays = this.removeDuplicateDays(processedDays);
-    
-    // Filter out past days - only show today and future days
-    const futureDays = this.filterFutureDays(uniqueDays);
+    const uniqueDays   = this.removeDuplicateDays(processedDays);
+    const futureDays   = this.filterFutureDays(uniqueDays);
 
-    // Render the overview
-    this.renderOverviewLayout(plot, futureDays, isEnsemble, model.label, location, forecast);
+    // Fetch BrightSky observed data for past days in the current week (Konstanz only)
+    let pastDays = [];
+    if (futureDays.length > 0 && location.name && location.name.includes('Konstanz') && window.WeatherAPI && window.WeatherAPI.getBrightSkyPastDays) {
+      const firstDow     = new Date(futureDays[0].date + 'T12:00:00Z').getUTCDay();
+      const mondayOffset = firstDow === 0 ? 6 : firstDow - 1;
+      if (mondayOffset > 0) {
+        const pastDates = [];
+        for (let i = mondayOffset; i > 0; i--) {
+          const d = new Date(futureDays[0].date + 'T12:00:00Z');
+          d.setUTCDate(d.getUTCDate() - i);
+          pastDates.push(d.toISOString().split('T')[0]);
+        }
+        pastDays = (await window.WeatherAPI.getBrightSkyPastDays(pastDates)).filter(Boolean);
+      }
+    }
+
+    this.renderOverviewLayout(plot, futureDays, isEnsemble, model.label, location, forecast, pastDays);
   },
 
   /**
@@ -239,7 +248,7 @@ window.OverviewPanel = {
    * @param {boolean} isEnsemble - Whether this is ensemble data
    * @param {string} modelLabel - Model label for header
    */
-  renderOverviewLayout: function(plot, days, isEnsemble, modelLabel, location, forecast) {
+  renderOverviewLayout: function(plot, days, isEnsemble, modelLabel, location, forecast, pastDays = []) {
     const container = document.createElement('div');
     container.style.cssText = 'padding:16px;min-width:980px;width:100%;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
@@ -266,10 +275,18 @@ window.OverviewPanel = {
     const todayStr = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).split(' ')[0];
 
     // Monday-align: find how many empty slots before first forecast day
-    // Use UTC noon to get day-of-week — avoids browser timezone ambiguity
-    const firstDow = new Date(days[0].date + 'T12:00:00Z').getUTCDay(); // 0=Sun
+    const firstDow     = new Date(days[0].date + 'T12:00:00Z').getUTCDay(); // 0=Sun
     const mondayOffset = firstDow === 0 ? 6 : firstDow - 1;
-    const slots = [...Array(mondayOffset).fill(null), ...days];
+
+    // Build slots: fill past positions with BrightSky observed days where available
+    const slots = [];
+    for (let i = mondayOffset; i > 0; i--) {
+      const d = new Date(days[0].date + 'T12:00:00Z');
+      d.setUTCDate(d.getUTCDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      slots.push(pastDays.find(p => p.date === dateStr) || null);
+    }
+    slots.push(...days);
 
     // Split into weeks of 7
     const weeks = [];
@@ -339,12 +356,15 @@ window.OverviewPanel = {
    * @returns {HTMLElement} Day card element
    */
   createDayCard: function(day, isEnsemble, { isToday = false, isWeekend = false } = {}) {
+    const isPast = !!day.isPast;
     const card = document.createElement('div');
     card.style.cssText = [
       'border-radius:12px',
       'padding:12px',
       'text-align:center',
-      isWeekend ? 'background:rgba(238,240,255,0.9)' : 'background:rgba(255,255,255,0.9)',
+      isPast    ? 'background:rgba(220,220,220,0.85)'
+      : isWeekend ? 'background:rgba(238,240,255,0.9)'
+                  : 'background:rgba(255,255,255,0.9)',
       isToday
         ? 'box-shadow:0 0 0 2px #007AFF,0 2px 12px rgba(0,122,255,0.2)'
         : 'box-shadow:0 2px 8px rgba(0,0,0,0.1)',
@@ -358,7 +378,8 @@ window.OverviewPanel = {
       color: #333;
       margin-bottom: 8px;
     `;
-    dayHeader.innerHTML = `${day.dayName}<br><span style="font-size: 12px; color: #666;">${day.dayMonth}</span>`;
+    const obsBadge = isPast ? ' <span style="font-size:9px;background:#888;color:white;padding:1px 4px;border-radius:6px;vertical-align:middle;">Obs.</span>' : '';
+    dayHeader.innerHTML = `${day.dayName}<br><span style="font-size:12px;color:#666;">${day.dayMonth}</span>${obsBadge}`;
     card.appendChild(dayHeader);
 
     // Min/Max temperatures
@@ -413,8 +434,10 @@ window.OverviewPanel = {
       tempDiv.textContent = tempText;
       
       const rainDiv = document.createElement('div');
-      rainDiv.style.cssText = 'color: #0066cc; font-size: 10px;';
-      rainDiv.textContent = `${slice.rainProb}%`;
+      rainDiv.style.cssText = `color:${isPast ? '#777' : '#0066cc'};font-size:10px;`;
+      rainDiv.textContent = isPast
+        ? (slice.precip != null ? `${slice.precip}mm` : '—')
+        : `${slice.rainProb}%`;
 
       const windDiv = document.createElement('div');
       windDiv.style.cssText = 'color: #777; font-size: 10px;';

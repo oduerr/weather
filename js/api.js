@@ -489,6 +489,82 @@ window.WeatherAPI.getForecastData = async function(location, model) {
 }
 
 /**
+ * Fetch BrightSky observed day summaries for a list of past dates.
+ * Returns array of day objects compatible with the overview panel format.
+ */
+window.WeatherAPI.getBrightSkyPastDays = async function(dates) {
+  if (!dates || dates.length === 0) return [];
+
+  const ICON_MAP = {
+    'clear-day': '☀️', 'clear-night': '🌙',
+    'partly-cloudy-day': '⛅', 'partly-cloudy-night': '⛅',
+    'cloudy': '☁️', 'overcast': '☁️', 'fog': '🌫️',
+    'rain': '🌧️', 'drizzle': '🌦️', 'sleet': '🌨️',
+    'snow': '🌨️', 'hail': '⛈️', 'thunderstorm': '⛈️', 'wind': '💨'
+  };
+  const bft = kmh => {
+    if (!kmh || kmh < 1) return 0;
+    if (kmh <= 5) return 1; if (kmh <= 11) return 2; if (kmh <= 19) return 3;
+    if (kmh <= 28) return 4; if (kmh <= 38) return 5; if (kmh <= 49) return 6;
+    if (kmh <= 61) return 7; if (kmh <= 74) return 8; return 9;
+  };
+
+  const raws = await Promise.all(
+    dates.map(d => window.WeatherAPI.fetchBrightSkyHistoricalWeather(d).catch(() => null))
+  );
+
+  return dates.map((dateStr, idx) => {
+    const raw = raws[idx];
+    if (!raw || !raw.weather) return null;
+
+    const obs = raw.weather.filter(o => {
+      const local = new Date(o.timestamp)
+        .toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
+      return local.split('T')[0] === dateStr;
+    });
+    if (!obs.length) return null;
+
+    const temps = obs.map(o => o.temperature).filter(t => t != null && !isNaN(t));
+    if (!temps.length) return null;
+
+    const slices = [6, 12, 21].map(targetHour => {
+      let best = null, bestDiff = Infinity;
+      obs.forEach(o => {
+        const local = new Date(o.timestamp)
+          .toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
+        const h = parseInt(local.split('T')[1], 10);
+        const diff = Math.abs(h - targetHour);
+        if (diff < bestDiff) { bestDiff = diff; best = o; }
+      });
+      if (!best || bestDiff > 3) return { hour: targetHour, icon: '—', temp: '—', precip: null, windBft: '—', gustBft: '—', isPast: true };
+      const wind = best.wind_speed ?? best.wind_speed_10 ?? 0;
+      const gust = best.wind_gust ?? best.wind_gust_speed_10 ?? best.wind_gust_speed ?? 0;
+      return {
+        hour: targetHour,
+        icon: ICON_MAP[best.icon] || '⛅',
+        temp: best.temperature != null ? Math.round(best.temperature) : '—',
+        precip: best.precipitation_10 != null ? Math.round(best.precipitation_10 * 10) / 10 : 0,
+        windBft: bft(wind),
+        gustBft: bft(gust),
+        isPast: true
+      };
+    });
+
+    const dateObj = new Date(dateStr + 'T12:00:00');
+    return {
+      date: dateStr,
+      dateObj,
+      dayName: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayMonth: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      minTemp: Math.min(...temps),
+      maxTemp: Math.max(...temps),
+      slices,
+      isPast: true
+    };
+  });
+};
+
+/**
  * Get observation data for a location
  * @param {Object} location - Location object with lat, lon, name
  * @returns {Promise<Object>} Observation data object

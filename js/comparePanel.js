@@ -6,9 +6,10 @@
 window.ComparePanel = {
 
   // ── Persistent state ────────────────────────────────────────────────────────
-  selectedModelIds: ['bestmatch', 'icon_d2_det', 'meteoswiss_icon_ch2'],
-  selectedParams:   ['symbols', 'temperature', 'rain', 'wind', 'uv'],
+  selectedModelIds: ['bestmatch', 'meteoswiss_icon_ch1', 'meteoswiss_icon_ch2'],
+  selectedParams:   ['symbols', 'temperature', 'rain', 'uv'],
   showAllModels:    false,
+  showAllParams:    false,
   _symbolTraceIndices: [],
 
   // ── Constants ────────────────────────────────────────────────────────────────
@@ -19,6 +20,9 @@ window.ComparePanel = {
     'meteoswiss_icon_ch1',
     'meteoswiss_icon_ch2',
     'arome_france_hd_det'
+  ],
+  DEFAULT_PARAM_IDS: [
+    'symbols', 'temperature', 'rain', 'rain_prob', 'wind', 'wind_dir', 'uv'
   ],
   MODEL_COLORS: [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
@@ -142,26 +146,10 @@ window.ComparePanel = {
 
     // Model toggles
     controlsDiv.appendChild(label('Models:'));
-    controlsDiv.appendChild(toggleBtn('All', false, () => {
-      self.selectedModelIds = allModels.map(m => m.id);
-      if (window.fetchAndPlot) window.fetchAndPlot();
-    }));
-    controlsDiv.appendChild(toggleBtn('None', false, () => {
-      self.selectedModelIds = [];
-      if (window.fetchAndPlot) window.fetchAndPlot();
-    }));
 
-    // Filter models to display
-    const modelsToRender = allModels.filter(m => {
-      // Always show if showAllModels is true
-      if (self.showAllModels) return true;
-      // Always show if it's currently selected
-      if (self.selectedModelIds.includes(m.id)) return true;
-      // Show default models
-      return self.DEFAULT_MODEL_IDS.includes(m.id);
-    });
-
-    modelsToRender.forEach(m => {
+    allModels.filter(m =>
+      self.showAllModels || self.selectedModelIds.includes(m.id) || self.DEFAULT_MODEL_IDS.includes(m.id)
+    ).forEach(m => {
       controlsDiv.appendChild(toggleBtn(
         m.label,
         self.selectedModelIds.includes(m.id),
@@ -174,18 +162,10 @@ window.ComparePanel = {
       ));
     });
 
-    // Add More/Less toggle button
-    if (self.showAllModels) {
-      controlsDiv.appendChild(toggleBtn('– Less', false, () => {
-        self.showAllModels = false;
-        self.renderControls(controlsDiv);
-      }));
-    } else {
-      controlsDiv.appendChild(toggleBtn('+ More', false, () => {
-        self.showAllModels = true;
-        self.renderControls(controlsDiv);
-      }));
-    }
+    controlsDiv.appendChild(toggleBtn(self.showAllModels ? '– Less' : '+ More', false, () => {
+      self.showAllModels = !self.showAllModels;
+      self.renderControls(controlsDiv);
+    }));
 
     // Separator
     const sep = document.createElement('span');
@@ -194,15 +174,10 @@ window.ComparePanel = {
 
     // Parameter toggles
     controlsDiv.appendChild(label('Params:'));
-    controlsDiv.appendChild(toggleBtn('All', false, () => {
-      self.selectedParams = [...self.PARAM_ORDER];
-      if (window.fetchAndPlot) window.fetchAndPlot();
-    }));
-    controlsDiv.appendChild(toggleBtn('None', false, () => {
-      self.selectedParams = [];
-      if (window.fetchAndPlot) window.fetchAndPlot();
-    }));
-    this.PARAM_ORDER.forEach(param => {
+
+    this.PARAM_ORDER.filter(p =>
+      self.showAllParams || self.selectedParams.includes(p) || self.DEFAULT_PARAM_IDS.includes(p)
+    ).forEach(param => {
       controlsDiv.appendChild(toggleBtn(
         self.PARAM_LABELS[param],
         self.selectedParams.includes(param),
@@ -218,6 +193,11 @@ window.ComparePanel = {
         }
       ));
     });
+
+    controlsDiv.appendChild(toggleBtn(self.showAllParams ? '– Less' : '+ More', false, () => {
+      self.showAllParams = !self.showAllParams;
+      self.renderControls(controlsDiv);
+    }));
   },
 
   // ── View range methods (called by main.js view buttons) ─────────────────────

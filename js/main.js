@@ -356,6 +356,8 @@ function updateModelRowVisibility() {
   const panel = document.getElementById('panelSelect').value;
   const row = document.getElementById('model-row');
   if (row) row.style.display = panel === 'compare' ? 'none' : 'flex';
+  const dewCtrl = document.getElementById('dew-point-control');
+  if (dewCtrl) dewCtrl.style.display = panel === 'temperature' ? 'flex' : 'none';
 }
 updateModelRowVisibility();
 
@@ -738,6 +740,15 @@ document.addEventListener('DOMContentLoaded', function() {
         currentState.view
       );
       window.fetchAndPlot();
+    });
+
+    document.getElementById('dewPointToggle').addEventListener('change', function() {
+      if (window.WeatherPlot) window.WeatherPlot._showDewPoint = this.checked;
+      const plotDiv = document.getElementById('plot');
+      if (plotDiv && plotDiv.classList.contains('js-plotly-plot')) {
+        Plotly.restyle('plot', { visible: this.checked }, [1]);
+        Plotly.relayout('plot', { 'yaxis2.visible': this.checked });
+      }
     });
 
   }, 100);

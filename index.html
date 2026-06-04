@@ -262,9 +262,13 @@
     </div>
 
     <!-- Row 2: Model selector (hidden for Compare panel) -->
-    <div id="model-row" style="display: flex; align-items: center; gap: 4px; width: 100%; margin-top: 8px;">
+    <div id="model-row" style="display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px;">
       <label for="modelSelect">🌤️</label>
       <select id="modelSelect"></select>
+      <div id="dew-point-control" style="display:none; align-items:center; gap:4px; margin-left:4px;">
+        <input type="checkbox" id="dewPointToggle" style="margin:0; cursor:pointer;">
+        <label for="dewPointToggle" style="font-size:12px; color:#555; cursor:pointer; white-space:nowrap;">💧 Dew Point</label>
+      </div>
     </div>
   </div>
 

@@ -480,27 +480,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       Plotly.relayout('plot', { 'xaxis.range': [startTime, endTime] });
     }
 
-    // Small dew point toggle button (only for deterministic models that have traceDew at index 1)
-    if (model.type !== 'ensemble') {
-      const existing = plotDiv.querySelector('#dew-toggle');
-      if (existing) existing.remove();
-      const btn = document.createElement('button');
-      btn.id = 'dew-toggle';
-      const update = () => {
-        const on = window.WeatherPlot._showDewPoint;
-        btn.textContent = on ? '💧 Dew Point ✓' : '💧 Dew Point';
-        btn.style.cssText = 'position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;z-index:10;' +
-          (on ? 'border:1px solid #007AFF;background:#007AFF;color:white;' : 'border:1px solid #bbb;background:white;color:#555;');
-      };
-      update();
-      btn.addEventListener('click', () => {
-        window.WeatherPlot._showDewPoint = !window.WeatherPlot._showDewPoint;
-        Plotly.restyle('plot', { visible: window.WeatherPlot._showDewPoint }, [1]);
-        Plotly.relayout('plot', { 'yaxis2.visible': window.WeatherPlot._showDewPoint });
-        update();
-      });
-      plotDiv.appendChild(btn);
-    }
+    // Sync checkbox state in controls bar
+    const dewCb = document.getElementById('dewPointToggle');
+    if (dewCb) dewCb.checked = window.WeatherPlot._showDewPoint;
   });
 };
 

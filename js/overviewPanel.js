@@ -4,10 +4,15 @@
  */
 
 window.OverviewPanel = {
-  
-  /**
-   * Configuration for the overview panel
-   */
+
+  kmhToBeaufort: function(kmh) {
+    if (kmh < 1) return 0; if (kmh <= 5) return 1; if (kmh <= 11) return 2;
+    if (kmh <= 19) return 3; if (kmh <= 28) return 4; if (kmh <= 38) return 5;
+    if (kmh <= 49) return 6; if (kmh <= 61) return 7; if (kmh <= 74) return 8;
+    if (kmh <= 88) return 9; if (kmh <= 102) return 10; if (kmh <= 117) return 11;
+    return 12;
+  },
+
   config: {
     sliceHours: [6, 12, 21], // Morning, Midday, Evening
     precipThreshold: 0.1, // mm threshold for rain probability
@@ -67,6 +72,8 @@ window.OverviewPanel = {
     const weatherCodes = hourly.weather_code || [];
     const precipitation = hourly.precipitation || [];
     const precipProb = hourly.precipitation_probability || [];
+    const windSpeed = hourly.wind_speed_10m || [];
+    const windGusts = hourly.wind_gusts_10m || [];
 
     // Group data by days
     const dayGroups = {};
@@ -82,7 +89,9 @@ window.OverviewPanel = {
           temperatures: [],
           weatherCodes: [],
           precipitation: [],
-          precipProb: []
+          precipProb: [],
+          windSpeed: [],
+          windGusts: []
         };
       }
       
@@ -91,6 +100,8 @@ window.OverviewPanel = {
       dayGroups[dayKey].weatherCodes.push(weatherCodes[index]);
       dayGroups[dayKey].precipitation.push(precipitation[index] || 0);
       dayGroups[dayKey].precipProb.push(precipProb[index] || 0);
+      dayGroups[dayKey].windSpeed.push(windSpeed[index] || 0);
+      dayGroups[dayKey].windGusts.push(windGusts[index] || 0);
     });
 
     // Process each day
@@ -174,21 +185,16 @@ window.OverviewPanel = {
       }
     });
 
-    if (bestIndex === -1 || bestDiff > 3) { // Allow up to 3 hours tolerance
-      return {
-        hour: targetHour,
-        icon: "—",
-        temp: "—",
-        tempSD: null,
-        rainProb: "—",
-        consensus: null
-      };
+    if (bestIndex === -1 || bestDiff > 3) {
+      return { hour: targetHour, icon: "—", temp: "—", tempSD: null, rainProb: "—", windBft: "—", gustBft: "—", consensus: null };
     }
 
     const temp = dayData.temperatures[bestIndex];
     const weatherCode = dayData.weatherCodes[bestIndex];
     const precip = dayData.precipitation[bestIndex];
     const precipProbValue = dayData.precipProb[bestIndex];
+    const wind = dayData.windSpeed[bestIndex];
+    const gust = dayData.windGusts[bestIndex];
 
     // Calculate rain probability
     let rainProb;
@@ -204,8 +210,10 @@ window.OverviewPanel = {
       hour: targetHour,
       icon: window.WeatherIcons ? window.WeatherIcons.getIcon(weatherCode) : "❓",
       temp: temp !== null && !isNaN(temp) ? Math.round(temp) : "—",
-      tempSD: isEnsemble && temp !== null && !isNaN(temp) ? Math.round(Math.abs(temp * 0.08)) : null, // Realistic SD calculation
+      tempSD: isEnsemble && temp !== null && !isNaN(temp) ? Math.round(Math.abs(temp * 0.08)) : null,
       rainProb: rainProb,
+      windBft: wind != null && !isNaN(wind) ? this.kmhToBeaufort(wind) : "—",
+      gustBft: gust != null && !isNaN(gust) ? this.kmhToBeaufort(gust) : "—",
       consensus: isEnsemble ? this.calculateConsensus(weatherCode) : null
     };
   },
@@ -251,7 +259,7 @@ window.OverviewPanel = {
     colHeader.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:6px;position:sticky;top:66px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);z-index:9;padding-bottom:4px;';
     DAY_NAMES.forEach((name, i) => {
       const cell = document.createElement('div');
-      cell.style.cssText = `text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${i >= 5 ? '#c0392b' : '#555'};`;
+      cell.style.cssText = `text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${i >= 5 ? '#6366f1' : '#555'};`;
       cell.textContent = name;
       colHeader.appendChild(cell);
     });
@@ -325,7 +333,7 @@ window.OverviewPanel = {
       'border-radius:12px',
       'padding:12px',
       'text-align:center',
-      isWeekend ? 'background:rgba(255,243,235,0.95)' : 'background:rgba(255,255,255,0.9)',
+      isWeekend ? 'background:rgba(238,240,255,0.9)' : 'background:rgba(255,255,255,0.9)',
       isToday
         ? 'box-shadow:0 0 0 2px #007AFF,0 2px 12px rgba(0,122,255,0.2)'
         : 'box-shadow:0 2px 8px rgba(0,0,0,0.1)',
@@ -396,6 +404,10 @@ window.OverviewPanel = {
       const rainDiv = document.createElement('div');
       rainDiv.style.cssText = 'color: #0066cc; font-size: 10px;';
       rainDiv.textContent = `${slice.rainProb}%`;
+
+      const windDiv = document.createElement('div');
+      windDiv.style.cssText = 'color: #777; font-size: 10px;';
+      windDiv.textContent = `💨 ${slice.windBft}/${slice.gustBft}`;
       
       // Consensus badge for ensemble
       if (isEnsemble && slice.consensus) {
@@ -407,6 +419,7 @@ window.OverviewPanel = {
       
       rightSide.appendChild(tempDiv);
       rightSide.appendChild(rainDiv);
+      rightSide.appendChild(windDiv);
 
       sliceDiv.appendChild(leftSide);
       sliceDiv.appendChild(rightSide);

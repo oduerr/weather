@@ -70,10 +70,11 @@ window.WeatherAPI.processWeatherStationData = function(stationData, currentDate)
     return { temperature: [], waterTemperature: [], times: [] };
   }
 
-  // Filter data for current day only
+  // Filter data for current day in Berlin timezone
   const todayData = stationData.filter(measurement => {
-    const measurementDate = new Date(measurement.time).toISOString().split('T')[0];
-    return measurementDate === currentDate;
+    const berlinDate = new Date(measurement.time)
+      .toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(' ')[0];
+    return berlinDate === currentDate;
   });
 
   if (todayData.length === 0) {
@@ -82,11 +83,12 @@ window.WeatherAPI.processWeatherStationData = function(stationData, currentDate)
 
   // Group data by hour and average measurements (~4 per hour)
   const hourlyGroups = {};
-  
+
   todayData.forEach(measurement => {
-    const time = new Date(measurement.time);
-    const hour = time.getHours();
-    const hourKey = `${currentDate}T${hour.toString().padStart(2, '0')}:00:00`;
+    const timeLocal = new Date(measurement.time)
+      .toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+    const hour = parseInt(timeLocal.split('T')[1].split(':')[0], 10);
+    const hourKey = timeLocal.slice(0, 11) + hour.toString().padStart(2, '0') + ':00:00';
     
     if (!hourlyGroups[hourKey]) {
       hourlyGroups[hourKey] = {
@@ -134,7 +136,9 @@ window.WeatherAPI.processWeatherStationData = function(stationData, currentDate)
 window.WeatherAPI.getKonstanzWeatherStationData = async function(currentDate) {
   // Use midnight from today as starting time
   const endTime = new Date();
-  const startTime = new Date(currentDate + "T00:00:00Z"); // Midnight today
+  // Go back 2h before UTC midnight so Berlin midnight (UTC+1/+2) is always included
+  const startTime = new Date(currentDate + "T00:00:00Z");
+  startTime.setTime(startTime.getTime() - 2 * 60 * 60 * 1000);
   
   // Format dates like the Python example
   const formatDate = (date) => {

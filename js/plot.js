@@ -176,64 +176,42 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 2, dash: 'dot' }, opacity: 0.6, yaxis: "y2" };
   const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
 
-  // Weather Station Data Integration (Konstanz only)
+  // Observed temperature traces (Konstanz only): fogcast station + BrightSky
   let weatherStationTraces = [];
 
   if (observations && observations.weatherStation && observations.weatherStation.temperature.length > 0) {
     const stationData = observations.weatherStation;
-
-    // Filter out NaN values for temperature
-    const validTempIndices = stationData.temperature
-      .map((temp, index) => !isNaN(temp) ? index : -1)
-      .filter(index => index !== -1);
-
-    if (validTempIndices.length > 0) {
-      // Add weather station temperature trace (only valid values)
-      const validTimes = validTempIndices.map(i => stationData.times[i]);
-      const validTemps = validTempIndices.map(i => stationData.temperature[i]);
-
-      const traceStationTemp = {
-        x: validTimes,
-        y: validTemps,
+    const validIdx = stationData.temperature
+      .map((t, i) => !isNaN(t) ? i : -1)
+      .filter(i => i !== -1);
+    if (validIdx.length > 0) {
+      weatherStationTraces.push({
+        x: validIdx.map(i => stationData.times[i]),
+        y: validIdx.map(i => stationData.temperature[i]),
         mode: 'markers+lines',
-        name: 'Weather Station (°C)',
+        name: 'Fogcast Station (°C)',
         line: { color: 'darkred', width: 1 },
         marker: { size: 3, color: 'darkred' },
         yaxis: "y1"
-      };
-      weatherStationTraces.push(traceStationTemp);
+      });
+    }
+  }
 
-      // Add water temperature if available
-      if (stationData.waterTemperature.length) {
-        const validWaterIndices = stationData.waterTemperature
-          .map((temp, index) => !isNaN(temp) ? index : -1)
-          .filter(index => index !== -1);
-
-        if (validWaterIndices.length > 0) {
-          console.log("📊 Water temperature data available:", validWaterIndices.length, "valid measurements");
-
-          // Create water temperature trace with only valid values
-          const validWaterTimes = validWaterIndices.map(i => stationData.times[i]);
-          const validWaterTemps = validWaterIndices.map(i => stationData.waterTemperature[i]);
-
-          const traceWaterTemp = {
-            x: validWaterTimes,
-            y: validWaterTemps,
-            mode: 'markers+lines',
-            name: 'Water Temperature (°C)',
-            line: { color: 'blue', width: 2, dash: 'dot' },
-            marker: { size: 2, color: 'blue' },
-            yaxis: "y1"
-          };
-
-          // Add the water temperature trace after the temperature trace
-          weatherStationTraces.push(traceWaterTemp);
-        } else {
-          console.log("⚠️ Water temperature data contains only NaN values - not displaying");
-        }
-      }
-    } else {
-      console.log("⚠️ Weather station temperature data contains only NaN values - not displaying");
+  if (observations && observations.brightSky && observations.brightSky.temperature && observations.brightSky.temperature.length > 0) {
+    const bs = observations.brightSky;
+    const validIdx = bs.temperature
+      .map((t, i) => t != null && !isNaN(t) ? i : -1)
+      .filter(i => i !== -1);
+    if (validIdx.length > 0) {
+      weatherStationTraces.push({
+        x: validIdx.map(i => bs.times[i]),
+        y: validIdx.map(i => bs.temperature[i]),
+        mode: 'markers+lines',
+        name: 'BrightSky (°C)',
+        line: { color: 'steelblue', width: 1, dash: 'dot' },
+        marker: { size: 3, color: 'steelblue' },
+        yaxis: "y1"
+      });
     }
   }
 

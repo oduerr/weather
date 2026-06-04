@@ -9,6 +9,7 @@ window.ComparePanel = {
   selectedModelIds: ['bestmatch', 'icon_d2_det', 'meteoswiss_icon_ch2'],
   selectedParams:   ['symbols', 'temperature', 'rain', 'wind', 'uv'],
   showAllModels:    false,
+  _symbolTraceIndices: [],
 
   // ── Constants ────────────────────────────────────────────────────────────────
   DEFAULT_MODEL_IDS: [
@@ -236,6 +237,7 @@ window.ComparePanel = {
     Plotly.relayout('compare-chart', {
       'xaxis.range': [viewStart.toISOString().replace('Z', ''), viewEnd.toISOString().replace('Z', '')]
     });
+    this._restyleSymbolSize(days);
   },
 
   viewAll: function() {
@@ -243,7 +245,11 @@ window.ComparePanel = {
     if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
     const s = chartDiv.getAttribute('data-start-time');
     const e = chartDiv.getAttribute('data-end-time');
-    if (s && e) Plotly.relayout('compare-chart', { 'xaxis.range': [s, e] });
+    if (s && e) {
+      Plotly.relayout('compare-chart', { 'xaxis.range': [s, e] });
+      const days = (new Date(e) - new Date(s)) / 86400000;
+      this._restyleSymbolSize(days);
+    }
   },
 
   viewOneDay: function() { this.relayoutView(1); },
@@ -316,6 +322,19 @@ window.ComparePanel = {
     this.animateRange(newStart, newEnd);
   },
 
+  _symbolSizeForDays: function(days) {
+    if (days <= 1.5) return 26;
+    if (days <= 2.5) return 20;
+    if (days <= 5.5) return 13;
+    return 9;
+  },
+
+  _restyleSymbolSize: function(days) {
+    const indices = this._symbolTraceIndices;
+    if (!indices || indices.length === 0) return;
+    Plotly.restyle('compare-chart', { 'textfont.size': this._symbolSizeForDays(days) }, indices);
+  },
+
   _buildColorMap: function(ids) {
     const map = {};
     ids.forEach((id, i) => { map[id] = this.MODEL_COLORS[i % this.MODEL_COLORS.length]; });
@@ -338,6 +357,20 @@ window.ComparePanel = {
 
   _buildTraces: function(compareModels, allData, orderedParams, colorMap) {
     const traces = [];
+    this._symbolTraceIndices = [];
+
+    let traceStart = null, traceEnd = null;
+    allData.forEach(d => {
+      const t = (d.forecast && d.forecast.hourly && d.forecast.hourly.time) || [];
+      if (t.length) {
+        if (!traceStart || t[0] < traceStart)             traceStart = t[0];
+        if (!traceEnd   || t[t.length - 1] > traceEnd)   traceEnd   = t[t.length - 1];
+      }
+    });
+    const initialDays = (traceStart && traceEnd)
+      ? (new Date(traceEnd) - new Date(traceStart)) / 86400000
+      : 7;
+    const symbolSize = this._symbolSizeForDays(initialDays);
 
     // Helper to format metadata run times
     const formatInitTime = (window.WeatherAPI && window.WeatherAPI.formatInitTime) 
@@ -389,12 +422,13 @@ window.ComparePanel = {
               yaxis
             });
 
+            this._symbolTraceIndices.push(traces.length);
             traces.push({
               x: times,
               y: times.map(() => yVal),
               mode: 'text',
               text: icons,
-              textfont: { size: 26 },
+              textfont: { size: symbolSize },
               name: `${displayName} icons`,
               legendgroup: model.id,
               showlegend: false,

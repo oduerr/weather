@@ -626,15 +626,31 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     yaxis: "y2" 
   };
 
-  // Row 3: Wind Direction (numerical for now)
-  const traceWindDirection = { 
-    x: timesLocal, 
-    y: windDirection, 
-    mode: 'lines+markers', 
-    name: 'Wind Direction (°)', 
-    line: { color: 'green', width: 2 }, 
-    marker: { size: 4 },
-    yaxis: "y3" 
+  // Wind direction arrows overlaid on the wind speed trace (every 3h)
+  const windDirToArrow = (deg) => {
+    if (deg == null) return '';
+    const d = ((deg % 360) + 360) % 360;
+    if (d < 22.5 || d >= 337.5) return '↑';
+    if (d < 67.5)  return '↗';
+    if (d < 112.5) return '→';
+    if (d < 157.5) return '↘';
+    if (d < 202.5) return '↓';
+    if (d < 247.5) return '↙';
+    if (d < 292.5) return '←';
+    return '↖';
+  };
+  const arrowIdx = timesLocal.map((_, i) => i).filter(i => i % 3 === 0);
+  const traceWindDirArrows = {
+    x: arrowIdx.map(i => timesLocal[i]),
+    y: arrowIdx.map(i => windSpeed[i]),
+    mode: 'text',
+    text: arrowIdx.map(i => windDirToArrow(windDirection[i])),
+    textfont: { size: 14, color: 'rgba(0,100,0,0.85)' },
+    name: 'Wind Direction',
+    hovertext: arrowIdx.map(i => `${windDirToArrow(windDirection[i])} ${Math.round(windDirection[i])}°`),
+    hoverinfo: 'text',
+    showlegend: false,
+    yaxis: 'y2'
   };
 
   // Ensemble traces for UV and Wind
@@ -642,14 +658,12 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   let traceUVClearSkyEnsemble = [];
   let traceWindSpeedEnsemble = [];
   let traceWindGustsEnsemble = [];
-  let traceWindDirectionEnsemble = [];
 
   if (model.type === "ensemble") {
     traceUVEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "uv_index", "y1", "purple");
     traceUVClearSkyEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "uv_index_clear_sky", "y1", "orange");
     traceWindSpeedEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_speed_10m", "y2", "blue");
     traceWindGustsEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_gusts_10m", "y2", "red");
-    traceWindDirectionEnsemble = window.WeatherPlot.createContinuousEnsembleTraces(hourly, "wind_direction_10m", "y3", "green");
   }
 
   // BrightSky observation data integration (Konstanz only)
@@ -686,17 +700,19 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     };
     brightSkyTraces.push(traceBrightSkyWindGusts);
     
-    // Add BrightSky wind direction trace (faint color)
-    const traceBrightSkyWindDirection = {
+    // Observed wind direction arrows overlaid on observed wind speed
+    brightSkyTraces.push({
       x: brightSkyData.times,
-      y: brightSkyData.windDirection,
-      mode: 'markers+lines',
-      name: 'Observed Wind Direction (°)',
-      line: { color: 'rgba(0, 128, 0, 0.3)', width: 2 },
-      marker: { size: 4, color: 'rgba(0, 128, 0, 0.4)' },
-      yaxis: "y3"
-    };
-    brightSkyTraces.push(traceBrightSkyWindDirection);
+      y: brightSkyData.windSpeed,
+      mode: 'text',
+      text: brightSkyData.windDirection.map(windDirToArrow),
+      textfont: { size: 14, color: 'rgba(0,100,0,0.4)' },
+      name: 'Observed Wind Direction',
+      hovertext: brightSkyData.windDirection.map(d => `Obs: ${windDirToArrow(d)} ${Math.round(d)}°`),
+      hoverinfo: 'text',
+      showlegend: false,
+      yaxis: 'y2'
+    });
     
     console.log("✅ Added BrightSky wind observation data for UV/Wind panel");
   }
@@ -826,14 +842,12 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   // Build all traces
   let allTraces;
   if (model.type === "ensemble") {
-    // For ensemble models, show ensemble traces (which include the mean)
     allTraces = [
-      ...traceUVEnsemble, ...traceUVClearSkyEnsemble, ...traceWindSpeedEnsemble, ...traceWindGustsEnsemble, ...traceWindDirectionEnsemble,
+      ...traceUVEnsemble, ...traceUVClearSkyEnsemble, ...traceWindSpeedEnsemble, ...traceWindGustsEnsemble,
     ];
   } else {
-    // For deterministic models, show individual traces
     allTraces = [
-      traceUV, traceUVClearSky, traceWindSpeed, traceWindGusts, traceWindDirection
+      traceUV, traceUVClearSky, traceWindSpeed, traceWindGusts, traceWindDirArrows
     ];
   }
   
@@ -885,21 +899,20 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
       tickmode: "auto", 
       showgrid: true, 
       tickangle: -30, 
-      rangeslider: { visible: false }, 
-      anchor: "y3",
+      rangeslider: { visible: false },
+      anchor: "y2",
       range: [startTime, endTime]
     },
 
-    yaxis1: { title: "UV Index", domain: [0.70, 1], anchor: "x", color: "purple", range: [0, 12] },
-    yaxis2: { 
-      title: "Wind Speed (km/h)", 
-      domain: [0.35, 0.70], 
+    yaxis1: { title: "UV Index", domain: [0.65, 1], anchor: "x", color: "purple", range: [0, 12] },
+    yaxis2: {
+      title: "Wind Speed (km/h)",
+      domain: [0, 0.65],
       anchor: "x",
       color: "blue",
-      autorange: true, // Ensure auto-scaling based on data
-      rangemode: 'tozero' // Start from zero
+      autorange: true,
+      rangemode: 'tozero'
     },
-    yaxis3: { title: "Wind Direction (°)", domain: [0, 0.35], anchor: "x", color: "green", range: [0, 360] },
 
     shapes: [...nightShading, ...beaufortShapes, shapeNow, ...lastObsShapesUV],
     showlegend: false, // remove legend for now

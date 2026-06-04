@@ -45,7 +45,7 @@ window.WeatherIcons = {
    * @returns {string} Weather emoji icon
    */
   getIcon: function(weatherCode) {
-    return this.iconMap[String(weatherCode)] || "❓";
+    return this.iconMap[String(weatherCode)] || "·";
   },
 
   /**

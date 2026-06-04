@@ -48,8 +48,8 @@ window.SwipeNavigation = {
 
     if (dt <= this.maxSwipeTime) {
       if (adx >= this.minSwipeDistance && adx > ady * 1.5) {
-        // Horizontal — pan time axis
-        this.panTime(dx > 0 ? 'right' : 'left');
+        // Horizontal — pan time axis (map-drag convention: swipe left = later time)
+        this.panTime(dx > 0 ? 'left' : 'right');
       } else if (ady >= this.minSwipeDistance && ady > adx * 1.5) {
         // Vertical — switch panel
         this.switchPanel(dy > 0 ? 'down' : 'up');

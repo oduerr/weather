@@ -693,6 +693,7 @@ window.ComparePanel = {
       },
       annotations: allAnnotations,
       margin:      { l: 60, r: 50, t: 30, b: 55 },
+      dragmode:      false,
       plot_bgcolor:  'white',
       paper_bgcolor: 'white',
     };

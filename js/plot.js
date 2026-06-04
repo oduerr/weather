@@ -467,6 +467,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
 
     shapes: [...nightShading, shapeNow, ...lastObsShapes],
     showlegend: false,
+    dragmode: false,
     annotations: [...weekdayAnnotations, ...lastObsAnnotations]
   };
 
@@ -913,7 +914,8 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     yaxis3: { domain: [0, 0.14], anchor: "x", visible: false, range: [0, 1] },
 
     shapes: [...nightShading, ...beaufortShapes, shapeNow, ...lastObsShapesUV],
-    showlegend: false, // remove legend for now
+    showlegend: false,
+    dragmode: false,
     legend: { 
       x: 0.02, 
       y: 0.98,

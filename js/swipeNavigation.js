@@ -1,354 +1,124 @@
-/**
- * Swipe Navigation Module
- * Provides swipe gestures and keyboard navigation for time axis panning
- */
-
 window.SwipeNavigation = {
   isEnabled: true,
   touchStartX: null,
   touchStartY: null,
   touchStartTime: null,
-  minSwipeDistance: 50, // Minimum distance for a swipe
-  maxSwipeTime: 500, // Maximum time for a swipe (ms)
-  plotElement: null,
-  
-  /**
-   * Initialize swipe navigation
-   */
+  minSwipeDistance: 50,
+  maxSwipeTime: 500,
+
   init: function() {
-    this.setupTouchListeners();
-    this.setupKeyboardListeners();
-    this.cacheElements();
+    document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: true });
+    document.addEventListener('touchend',   this.handleTouchEnd.bind(this),   { passive: true });
+    document.addEventListener('keydown',    this.handleKeyDown.bind(this),    { passive: false });
   },
-  
-  /**
-   * Cache DOM elements for performance
-   */
-  cacheElements: function() {
-    this.plotElement = document.getElementById('plot');
+
+  controlsHidden: function() {
+    const c = document.getElementById('controls');
+    return c && c.classList.contains('fade-out');
   },
-  
-  /**
-   * Get the currently active plot element
-   */
+
   getActivePlotElement: function() {
-    const compareChart = document.getElementById('compare-chart');
-    if (compareChart && compareChart.classList && compareChart.classList.contains('js-plotly-plot')) {
-      return compareChart;
-    }
-    const plotDiv = document.getElementById('plot');
-    if (plotDiv && plotDiv.classList && plotDiv.classList.contains('js-plotly-plot')) {
-      return plotDiv;
-    }
+    const cc = document.getElementById('compare-chart');
+    if (cc && cc.classList.contains('js-plotly-plot')) return cc;
+    const p = document.getElementById('plot');
+    if (p  && p.classList.contains('js-plotly-plot'))  return p;
     return null;
   },
-  
-  /**
-   * Setup touch event listeners
-   */
-  setupTouchListeners: function() {
-    // Use document for global touch handling
-    document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: true });
-    document.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: true });
-  },
-  
-  /**
-   * Setup keyboard event listeners
-   */
-  setupKeyboardListeners: function() {
-    document.addEventListener('keydown', this.handleKeyDown.bind(this), { passive: false });
-  },
-  
-  /**
-   * Handle touch start event
-   */
+
   handleTouchStart: function(event) {
-    if (!this.isEnabled || !this.hasActivePlot() || this.isTouchInPlotArea(event)) {
-      return;
-    }
-    
-    const touch = event.touches[0];
-    this.touchStartX = touch.clientX;
-    this.touchStartY = touch.clientY;
+    if (!this.isEnabled) return;
+    const t = event.touches[0];
+    this.touchStartX    = t.clientX;
+    this.touchStartY    = t.clientY;
     this.touchStartTime = Date.now();
   },
-  
-  /**
-   * Handle touch end event
-   */
+
   handleTouchEnd: function(event) {
-    if (!this.isEnabled || !this.hasActivePlot() || 
-        this.touchStartX === null || this.touchStartY === null) {
-      this.resetTouch();
-      return;
+    if (!this.isEnabled || this.touchStartX === null) { this.reset(); return; }
+
+    // Only act when the controls bar is hidden
+    if (!this.controlsHidden()) { this.reset(); return; }
+
+    const t      = event.changedTouches[0];
+    const dx     = t.clientX - this.touchStartX;
+    const dy     = t.clientY - this.touchStartY;
+    const dt     = Date.now() - this.touchStartTime;
+    const adx    = Math.abs(dx);
+    const ady    = Math.abs(dy);
+
+    if (dt <= this.maxSwipeTime) {
+      if (adx >= this.minSwipeDistance && adx > ady * 1.5) {
+        // Horizontal — pan time axis
+        this.panTime(dx > 0 ? 'right' : 'left');
+      } else if (ady >= this.minSwipeDistance && ady > adx * 1.5) {
+        // Vertical — switch panel
+        this.switchPanel(dy > 0 ? 'down' : 'up');
+      }
     }
-    
-    const touch = event.changedTouches[0];
-    const touchEndX = touch.clientX;
-    const touchEndY = touch.clientY;
-    const touchEndTime = Date.now();
-    
-    // Calculate swipe metrics
-    const deltaX = touchEndX - this.touchStartX;
-    const deltaY = touchEndY - this.touchStartY;
-    const deltaTime = touchEndTime - this.touchStartTime;
-    const distance = Math.abs(deltaX);
-    const verticalDistance = Math.abs(deltaY);
-    
-    // Check if this is a valid horizontal swipe
-    if (this.isValidSwipe(distance, verticalDistance, deltaTime)) {
-      const direction = deltaX > 0 ? 'right' : 'left';
-      this.handleSwipe(direction);
-    }
-    
-    this.resetTouch();
+    this.reset();
   },
-  
-  /**
-   * Handle keyboard navigation
-   */
+
   handleKeyDown: function(event) {
-    if (!this.isEnabled || !this.hasActivePlot()) {
+    if (!this.isEnabled) return;
+    if (['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName.toUpperCase())) return;
+    if (event.key === 'ArrowLeft')  { event.preventDefault(); this.panTime('left');  }
+    if (event.key === 'ArrowRight') { event.preventDefault(); this.panTime('right'); }
+  },
+
+  panTime: function(direction) {
+    const el = this.getActivePlotElement();
+    if (!el) return;
+
+    const layout = el.layout || el._fullLayout || {};
+    const range  = layout.xaxis && layout.xaxis.range;
+    if (!Array.isArray(range) || range.length !== 2) return;
+
+    const start = new Date(range[0]);
+    const end   = new Date(range[1]);
+    const pan   = (end - start) * 0.75;
+    let ns = new Date(start.getTime() + (direction === 'right' ?  pan : -pan));
+    let ne = new Date(end.getTime()   + (direction === 'right' ?  pan : -pan));
+
+    // Clamp to data boundaries
+    const ds = el.getAttribute('data-start-time');
+    const de = el.getAttribute('data-end-time');
+    if (ds && de) {
+      const dStart = new Date(ds), dEnd = new Date(de);
+      if (ns < dStart) { ne = new Date(ne.getTime() + (dStart - ns)); ns = dStart; }
+      if (ne > dEnd)   { ns = new Date(ns.getTime() - (ne - dEnd));   ne = dEnd;   }
+      if (ns < dStart) ns = dStart;
+      if (ne > dEnd)   ne = dEnd;
+    }
+
+    const fmt = d => d.toISOString().replace('Z', '');
+
+    if (el.id === 'compare-chart' && window.ComparePanel && window.ComparePanel.animateRange) {
+      window.ComparePanel.animateRange(ns, ne);
       return;
     }
-    
-    // Only handle arrow keys and avoid interference with input fields
-    if (event.target.tagName.toLowerCase() === 'input' || 
-        event.target.tagName.toLowerCase() === 'select' ||
-        event.target.tagName.toLowerCase() === 'textarea') {
-      return;
-    }
-    
-    switch (event.key) {
-      case 'ArrowLeft':
-        event.preventDefault();
-        this.handleSwipe('left');
-        break;
-      case 'ArrowRight':
-        event.preventDefault();
-        this.handleSwipe('right');
-        break;
-    }
-  },
-  
-  /**
-   * Check if touch is within the Plotly plot area
-   */
-  isTouchInPlotArea: function(event) {
-    const activeEl = this.getActivePlotElement();
-    if (!activeEl) {
-      return false;
-    }
-    
-    const touch = event.touches[0];
-    const rect = activeEl.getBoundingClientRect();
-    
-    return (
-      touch.clientX >= rect.left &&
-      touch.clientX <= rect.right &&
-      touch.clientY >= rect.top &&
-      touch.clientY <= rect.bottom
-    );
-  },
-  
-  /**
-   * Check if we have an active Plotly plot
-   */
-  hasActivePlot: function() {
-    return !!this.getActivePlotElement();
-  },
-  
-  /**
-   * Validate swipe gesture
-   */
-  isValidSwipe: function(distance, verticalDistance, deltaTime) {
-    return (
-      distance >= this.minSwipeDistance && // Minimum horizontal distance
-      deltaTime <= this.maxSwipeTime && // Within time limit
-      verticalDistance < distance * 0.5 // More horizontal than vertical
-    );
-  },
-  
-  /**
-   * Handle swipe gesture
-   */
-  handleSwipe: function(direction) {
-    try {
-      const currentRange = this.getCurrentXAxisRange();
-      if (!currentRange) {
-        console.warn('SwipeNavigation: Could not get current x-axis range');
-        return;
-      }
-      
-      const newRange = this.calculateNewRange(currentRange, direction);
-      this.updateXAxisRange(newRange);
-      
-    } catch (error) {
-      console.warn('SwipeNavigation: Error handling swipe', error);
-    }
-  },
-  
-  /**
-   * Get current x-axis range from Plotly
-   */
-  getCurrentXAxisRange: function() {
-    const activeEl = this.getActivePlotElement();
-    if (!activeEl || !activeEl.layout) {
-      return null;
-    }
-    
-    const layout = activeEl.layout || activeEl._fullLayout || {};
-    const xaxis = layout.xaxis;
-    
-    if (!xaxis || !Array.isArray(xaxis.range) || xaxis.range.length !== 2) {
-      return null;
-    }
-    
-    return {
-      start: new Date(xaxis.range[0]),
-      end: new Date(xaxis.range[1])
-    };
-  },
-  
-  /**
-   * Calculate new range based on swipe direction
-   */
-  calculateNewRange: function(currentRange, direction) {
-    const currentWidth = currentRange.end - currentRange.start;
-    const panDistance = currentWidth * 0.75; // 0.5x current range
-    
-    let newStart, newEnd;
-    
-    if (direction === 'right') {
-      // Swipe right = move forward in time
-      newStart = new Date(currentRange.start.getTime() + panDistance);
-      newEnd = new Date(currentRange.end.getTime() + panDistance);
-    } else {
-      // Swipe left = move backward in time
-      newStart = new Date(currentRange.start.getTime() - panDistance);
-      newEnd = new Date(currentRange.end.getTime() - panDistance);
-    }
-    
-    // Clamp to data boundaries if available
-    const dataRange = this.getDataBoundaries();
-    if (dataRange) {
-      // Don't pan beyond data boundaries
-      if (newStart < dataRange.start) {
-        const offset = dataRange.start - newStart;
-        newStart = dataRange.start;
-        newEnd = new Date(newEnd.getTime() + offset);
-      }
-      
-      if (newEnd > dataRange.end) {
-        const offset = newEnd - dataRange.end;
-        newEnd = dataRange.end;
-        newStart = new Date(newStart.getTime() - offset);
-      }
-      
-      // Final boundary check
-      if (newStart < dataRange.start) {
-        newStart = dataRange.start;
-      }
-      if (newEnd > dataRange.end) {
-        newEnd = dataRange.end;
-      }
-    }
-    
-    return { start: newStart, end: newEnd };
-  },
-  
-  /**
-   * Get data boundaries from plot element
-   */
-  getDataBoundaries: function() {
-    const activeEl = this.getActivePlotElement();
-    if (!activeEl) {
-      return null;
-    }
-    
-    const startTime = activeEl.getAttribute('data-start-time');
-    const endTime = activeEl.getAttribute('data-end-time');
-    
-    if (!startTime || !endTime) {
-      return null;
-    }
-    
-    return {
-      start: new Date(startTime),
-      end: new Date(endTime)
-    };
-  },
-  
-  /**
-   * Update x-axis range using Plotly
-   */
-  updateXAxisRange: function(newRange) {
-    const activeEl = this.getActivePlotElement();
-    if (!window.Plotly || !activeEl) {
-      return;
-    }
-    
-    if (activeEl.id === 'compare-chart' && window.ComparePanel && typeof window.ComparePanel.animateRange === 'function') {
-      window.ComparePanel.animateRange(newRange.start, newRange.end);
-      return;
-    }
-    
-    const formatTime = (date) => date.toISOString().replace('Z', '');
-    
-    Plotly.animate(activeEl.id, {
-      layout: {
-        'xaxis.range': [formatTime(newRange.start), formatTime(newRange.end)]
-      }
+    Plotly.animate(el.id, {
+      layout: { 'xaxis.range': [fmt(ns), fmt(ne)] }
     }, {
-      transition: {
-        duration: 600,  // 300ms animation
-        easing: 'ease-out'
-      },
-      frame: {
-        duration: 600,
-        redraw: false
-      }
+      transition: { duration: 600, easing: 'ease-out' },
+      frame:      { duration: 600, redraw: false }
     });
   },
-  
-  /**
-   * Reset touch tracking variables
-   */
-  resetTouch: function() {
-    this.touchStartX = null;
-    this.touchStartY = null;
-    this.touchStartTime = null;
+
+  switchPanel: function(direction) {
+    const sel = document.getElementById('panelSelect');
+    if (!sel) return;
+    const n = sel.options.length;
+    sel.selectedIndex = direction === 'up'
+      ? (sel.selectedIndex - 1 + n) % n
+      : (sel.selectedIndex + 1) % n;
+    sel.dispatchEvent(new Event('change'));
   },
-  
-  /**
-   * Enable swipe navigation
-   */
-  enable: function() {
-    this.isEnabled = true;
-  },
-  
-  /**
-   * Disable swipe navigation
-   */
-  disable: function() {
-    this.isEnabled = false;
-    this.resetTouch();
-  },
-  
-  /**
-   * Cleanup event listeners (for potential future use)
-   */
-  destroy: function() {
-    this.disable();
-    // Note: In a production app, you might want to remove event listeners
-    // For this implementation, we'll keep them attached since they're lightweight
+
+  reset: function() {
+    this.touchStartX = this.touchStartY = this.touchStartTime = null;
   }
 };
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-  // Wait a bit to ensure other scripts have loaded
-  setTimeout(() => {
-    window.SwipeNavigation.init();
-  }, 300);
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => window.SwipeNavigation.init(), 300);
 });

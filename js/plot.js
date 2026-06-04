@@ -394,76 +394,60 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   // Step 1: Find the unique days in the dataset
   const uniqueDays = [...new Set(timesLocal.map(t => t.split("T")[0]))];
 
-  // Step 2: Create annotations at noon for each day
+  const compact = window.innerWidth < 768;
+
   const weekdayAnnotations = uniqueDays.map(day => {
-    const noonTime = new Date(`${day}T12:00:00`);  // Set noon time
+    const noonTime = new Date(`${day}T12:00:00`);
     return {
-      x: noonTime.toISOString(),   // X position at noon
-      y: 1.05,                     // Y position (above first row)
-      xref: "x",
-      yref: "paper",
-      text: noonTime.toLocaleDateString("en-US", { weekday: "long" }), // "Monday", "Tuesday", etc.
+      x: noonTime.toISOString(),
+      y: 1.05,
+      xref: "x", yref: "paper",
+      text: noonTime.toLocaleDateString("en-US", { weekday: compact ? "short" : "long" }),
       showarrow: false,
-      font: { size: 14, color: "black", weight: "bold" },
+      font: { size: compact ? 11 : 14, color: "black", weight: "bold" },
       align: "center"
     };
   });
 
-  // Step 3: Add the annotations to the layout
   let titleSuffix = "";
   if (forecast.model_metadata && forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
     titleSuffix = ` | 🕒 Run: ${window.WeatherAPI.formatInitTime(forecast.model_metadata.last_run_initialisation_time)}`;
   }
 
   const layout = {
-    title: {
+    title: compact ? { text: '' } : {
       text: `📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} ${model.label} – ${location.name}${titleSuffix}`,
-      x: 0.05, // Align title to the left
-      y: -0.05, // Move title up slightly
-      xanchor: "left",
-      font: { size: 12 }, // Small font for compactness
-      showlegend: false,
-      margin: { l: 40, r: 20, t: 20, b: 10 },
+      x: 0.05, y: -0.05, xanchor: "left", font: { size: 12 },
     },
-    showtitle: true,
     width: window.innerWidth,
     height: window.innerHeight * 0.98,
+    margin: compact
+      ? { l: 32, r: 32, t: 25, b: 42 }
+      : { l: 60, r: 60, t: 40, b: 55 },
 
-    // X-axis settings - default to showing all data
-    xaxis: { 
-      title: "Time (CET/CEST)", 
-      tickformat: "%b %d %H:%M", 
-      tickmode: "auto", 
-      showgrid: true, 
-      tickangle: -30, 
-      rangeslider: { visible: false }, 
-      anchor: "y5",
-      // Use provided times as-is; they are already local strings for forecast
+    xaxis: {
+      title: compact ? '' : 'Time (CET/CEST)',
+      tickformat: compact ? '%d.%m %H:%M' : '%b %d %H:%M',
+      tickmode: "auto", showgrid: true, tickangle: -30,
+      rangeslider: { visible: false }, anchor: "y5",
       range: [startTime, endTime]
     },
 
     yaxis1: {
-      title: "Temperature (°C)",
-      domain: [0.70, 1],
-      anchor: "x",
-      color: "red",
+      title: compact ? '' : 'Temperature (°C)',
+      domain: [0.70, 1], anchor: "x", color: "red",
       ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
-    },  // 🔼 Slightly larger top row
+    },
     yaxis2: {
-      title: "Dew Point (°C)",
-      overlaying: "y1",
-      side: "right",
-      anchor: "x",
-      color: "blue",
+      title: compact ? '' : 'Dew Point (°C)',
+      overlaying: "y1", side: "right", anchor: "x", color: "blue",
       visible: window.WeatherPlot._showDewPoint,
       ...(Object.keys(tempDewRange).length > 0 && { range: [tempDewRange.min, tempDewRange.max] })
     },
-
-    yaxis3: { title: "Rainfall (mm)", domain: [0.45, 0.70], anchor: "x", color: "#1E3A8A" },  // 🔽 Smaller middle row
-    yaxis4: { title: "Rain Probability (%) / Humidity (%) ", overlaying: "y3", side: "right", anchor: "x", color: "#008B8B" },
-
-    yaxis5: { title: "Cloud Cover (%)", domain: [0, 0.35], anchor: "x" },  // 🔼 More space for bottom row
-    yaxis6: { title: "Visibility (km)", overlaying: "y5", side: "right", anchor: "x", range: [0, 100], color: "darkred" },
+    yaxis3: { title: compact ? '' : 'Rainfall (mm)',       domain: [0.45, 0.70], anchor: "x", color: "#1E3A8A" },
+    yaxis4: { title: compact ? '' : 'Rain Prob (%) / Humidity (%)', overlaying: "y3", side: "right", anchor: "x", color: "#008B8B" },
+    yaxis5: { title: compact ? '' : 'Cloud Cover (%)',     domain: [0, 0.35], anchor: "x" },
+    yaxis6: { title: compact ? '' : 'Visibility (km)',     overlaying: "y5", side: "right", anchor: "x", range: [0, 100], color: "darkred" },
 
     shapes: [...nightShading, shapeNow, ...lastObsShapes],
     showlegend: false,
@@ -859,56 +843,47 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     allTraces = [...allTraces, ...brightSkyTraces];
   }
 
-  // Find unique days for weekday annotations
+  const compact = window.innerWidth < 768;
+
   const uniqueDays = [...new Set(timesLocal.map(t => t.split("T")[0]))];
   const weekdayAnnotations = uniqueDays.map(day => {
     const noonTime = new Date(`${day}T12:00:00`);
     return {
       x: noonTime.toISOString(),
-      y: 1.05,
-      xref: "x",
-      yref: "paper",
-      text: noonTime.toLocaleDateString("en-US", { weekday: "long" }),
+      y: 1.05, xref: "x", yref: "paper",
+      text: noonTime.toLocaleDateString("en-US", { weekday: compact ? "short" : "long" }),
       showarrow: false,
-      font: { size: 14, color: "black", weight: "bold" },
+      font: { size: compact ? 11 : 14, color: "black", weight: "bold" },
       align: "center"
     };
   });
 
-  // Build layout for UV/Wind panel
   let titleSuffix = "";
   if (forecast.model_metadata && forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
     titleSuffix = ` | 🕒 Run: ${window.WeatherAPI.formatInitTime(forecast.model_metadata.last_run_initialisation_time)}`;
   }
 
   const layout = {
-    title: {
+    title: compact ? { text: '' } : {
       text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}${titleSuffix}`,
-      x: 0.05,
-      y: -0.05,
-      xanchor: "left",
-      font: { size: 12 },
-      showlegend: false,
-      margin: { l: 40, r: 60, t: 20, b: 10 }, // Increased right margin for annotations
+      x: 0.05, y: -0.05, xanchor: "left", font: { size: 12 },
     },
-    showtitle: true,
     width: window.innerWidth,
-    height: Math.max(window.innerHeight - 120, 400), // Mobile-friendly height
+    height: Math.max(window.innerHeight - 120, 400),
+    margin: compact
+      ? { l: 32, r: 32, t: 25, b: 42 }
+      : { l: 60, r: 60, t: 40, b: 55 },
 
-    // X-axis settings
-    xaxis: { 
-      title: "Time (CET/CEST)", 
-      tickformat: "%b %d %H:%M", 
-      tickmode: "auto", 
-      showgrid: true, 
-      tickangle: -30, 
-      rangeslider: { visible: false },
-      anchor: "y3",
+    xaxis: {
+      title: compact ? '' : 'Time (CET/CEST)',
+      tickformat: compact ? '%d.%m %H:%M' : '%b %d %H:%M',
+      tickmode: "auto", showgrid: true, tickangle: -30,
+      rangeslider: { visible: false }, anchor: "y3",
       range: [startTime, endTime]
     },
 
-    yaxis1: { title: "UV Index", domain: [0.62, 1], anchor: "x", color: "purple", range: [0, 12] },
-    yaxis2: { title: "Wind Speed (km/h)", domain: [0.18, 0.62], anchor: "x", color: "blue", autorange: true, rangemode: 'tozero' },
+    yaxis1: { title: compact ? '' : 'UV Index',           domain: [0.62, 1],     anchor: "x", color: "purple", range: [0, 12] },
+    yaxis2: { title: compact ? '' : 'Wind Speed (km/h)',  domain: [0.18, 0.62],  anchor: "x", color: "blue", autorange: true, rangemode: 'tozero' },
     yaxis3: { domain: [0, 0.14], anchor: "x", visible: false, range: [0, 1] },
 
     shapes: [...nightShading, ...beaufortShapes, shapeNow, ...lastObsShapesUV],

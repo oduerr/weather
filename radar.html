@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rain Radar Viewer</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Inline CSS for Rich Aesthetics -->
+    <style>
+        :root {
+            --bg-glass: rgba(15, 23, 42, 0.8);
+            --bg-glass-hover: rgba(30, 41, 59, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.4);
+            --success: #10b981;
+            --danger: #ef4444;
+            --shadow-premium: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-family);
+            background-color: #0b0f19;
+            color: var(--text-primary);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-color: #0f172a;
+        }
+
+        /* Custom Leaflet overrides to fit premium dark theme */
+        .leaflet-bar {
+            border: 1px solid var(--border-glass) !important;
+            box-shadow: var(--shadow-premium) !important;
+            border-radius: 8px !important;
+            overflow: hidden;
+        }
+        .leaflet-bar a {
+            background-color: var(--bg-glass) !important;
+            color: var(--text-primary) !important;
+            border-bottom: 1px solid var(--border-glass) !important;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s;
+        }
+        .leaflet-bar a:hover {
+            background-color: var(--bg-glass-hover) !important;
+            color: var(--accent) !important;
+        }
+        .leaflet-container {
+            font-family: var(--font-family) !important;
+        }
+
+        /* Floating Dashboard Panel */
+        .dashboard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 380px;
+            max-width: calc(100vw - 40px);
+            max-height: calc(100vh - 40px);
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            box-shadow: var(--shadow-premium);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        .dashboard.collapsed {
+            transform: translateX(420px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Toggle Dashboard Button (when collapsed) */
+        .dashboard-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            box-shadow: var(--shadow-premium);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        .dashboard-toggle:hover {
+            background: var(--bg-glass-hover);
+            color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        /* App Title Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-icon-wrapper {
+            position: relative;
+            width: 12px;
+            height: 12px;
+        }
+
+        .brand-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .brand-pulse {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            animation: pulse-glow 2s infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(3.5);
+                opacity: 0;
+            }
+        }
+
+        .brand-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--accent);
+            border-color: rgba(14, 165, 233, 0.3);
+            transform: translateY(-2px);
+        }
+        .btn-icon:active {
+            transform: translateY(0);
+        }
+
+        /* Location Panel */
+        .location-info {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .location-coords-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .location-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .location-val {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-family: monospace;
+        }
+
+        .location-stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .location-stats span strong {
+            color: var(--text-primary);
+        }
+
+        /* Segment Controls (Basemap Switcher) */
+        .segment-control {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 3px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .segment-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 7px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        .segment-btn.active {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Main Timeline Animation Panel */
+        .timeline-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .time-display {
+            text-align: center;
+        }
+
+        .time-display h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .time-display p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Range Scrubber */
+        .scrubber-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="range"].scrubber {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        input[type="range"].scrubber::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow), 0 2px 4px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            border: 2px solid #ffffff;
+        }
+
+        input[type="range"].scrubber::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #38bdf8;
+        }
+
+        .scrubber-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            padding: 0 2px;
+        }
+
+        /* Playback buttons */
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .btn-play {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px var(--accent-glow);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-play:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px var(--accent-glow);
+            background: #38bdf8;
+        }
+        .btn-play:active {
+            transform: scale(0.95);
+        }
+        .btn-play svg {
+            fill: currentColor;
+        }
+
+        .btn-step {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .btn-step:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            transform: scale(1.05);
+        }
+        .btn-step:active {
+            transform: scale(0.95);
+        }
+
+        /* Speed selectors */
+        .speed-control {
+            display: flex;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 2px;
+            width: 100%;
+        }
+
+        .speed-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .speed-btn.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        /* Settings Grid */
+        .settings-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .setting-label-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .setting-label-group svg {
+            color: var(--text-secondary);
+        }
+
+        /* Custom Toggle Switch (iOS style) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-switch {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 24px;
+        }
+
+        .slider-switch:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider-switch {
+            background-color: var(--success);
+        }
+
+        input:focus + .slider-switch {
+            box-shadow: 0 0 1px var(--success);
+        }
+
+        input:checked + .slider-switch:before {
+            transform: translateX(20px);
+        }
+
+        /* Opacity range adjustment */
+        .opacity-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-grow: 1;
+            max-width: 180px;
+        }
+
+        .opacity-val {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 36px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        input[type="range"].opacity-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].opacity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .btn-zoom-adjust {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            user-select: none;
+            outline: none;
+        }
+        .btn-zoom-adjust:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--accent);
+            border-color: rgba(14, 165, 233, 0.3);
+            transform: scale(1.05);
+        }
+        .btn-zoom-adjust:active {
+            transform: scale(0.9);
+        }
+
+        /* Legend CSS */
+        .legend-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .legend-bar {
+            height: 10px;
+            border-radius: 5px;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+
+        /* Gradient for Rain: Universal Blue */
+        .legend-bar.rain {
+            background: linear-gradient(to right, 
+                #88ddeeff 0%, 
+                #00a3e0ff 15%, 
+                #005588ff 35%, 
+                #ffee00ff 50%, 
+                #ffaa00ff 65%, 
+                #ff4400ff 80%, 
+                #c10000ff 90%, 
+                #ffaaffff 96%, 
+                #ffffffff 100%
+            );
+        }
+
+        /* Gradient for Snow */
+        .legend-bar.snow {
+            background: linear-gradient(to right, 
+                #cfffff00 0%,
+                #85c5ffff 20%, 
+                #38da44ff 40%, 
+                #1a66b1ff 60%, 
+                #0c4bffff 80%, 
+                #502a68ff 100%
+            );
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            padding: 0 2px;
+        }
+
+        /* Clipboard Copy Alert */
+        .toast {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            z-index: 2000;
+            background: rgba(16, 185, 129, 0.95);
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Loading Spinner Overlay on Controls */
+        .spinner-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .spinner-wrapper.show {
+            opacity: 1;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Collapsed Panel Button in Bottom right on mobile */
+        @media (max-width: 480px) {
+            .dashboard {
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-width: 100%;
+                max-height: 80vh;
+                border-radius: 20px 20px 0 0;
+                border-left: none;
+                border-right: none;
+                border-bottom: none;
+                box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+                padding: 16px;
+                gap: 12px;
+                transform: translateY(0);
+            }
+            
+            .dashboard.collapsed {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            .dashboard-toggle {
+                top: auto;
+                bottom: 20px;
+                right: 20px;
+                left: auto;
+            }
+
+            .external-links-panel {
+                top: 15px;
+                left: 15px;
+                width: 150px;
+                padding: 8px;
+                gap: 6px;
+            }
+
+            .ext-link-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+                gap: 6px;
+            }
+        }
+
+        /* External Links Panel (Top-Left) */
+        .external-links-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: var(--shadow-premium);
+            width: 180px;
+            transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .external-links-panel .panel-header {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            padding-left: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .links-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            opacity: 1;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-top 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* Collapsed State for Links Panel */
+        .external-links-panel.collapsed {
+            gap: 0;
+            padding-bottom: 8px;
+        }
+
+        .external-links-panel.collapsed .links-wrapper {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none;
+            margin-top: 0;
+        }
+
+        .external-links-panel.collapsed #svgLinksChevron {
+            transform: rotate(-180deg);
+        }
+
+        .ext-link-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .ext-link-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--accent);
+            border-color: rgba(14, 165, 233, 0.3);
+            transform: translateX(3px);
+        }
+
+        .ext-link-btn svg {
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            transition: color 0.2s;
+        }
+
+        .ext-link-btn:hover svg {
+            color: var(--accent);
+        }
+
+        /* Dashboard Collapsible Elements Transitions */
+        .segment-control,
+        .settings-panel,
+        .legend-panel {
+            max-height: 200px;
+            opacity: 1;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.25s ease,
+                        padding 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        margin 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        border-width 0.35s ease;
+        }
+
+        /* Compact Dashboard State */
+        .dashboard.compact {
+            gap: 12px;
+        }
+
+        .dashboard.compact .segment-control,
+        .dashboard.compact .settings-panel,
+        .dashboard.compact .legend-panel {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            border-top-width: 0 !important;
+            border-bottom-width: 0 !important;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- External Weather Resources Panel (Top-Left) -->
+    <div class="external-links-panel" id="externalLinksPanel">
+        <div class="panel-header" id="btnToggleLinks" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
+            <span>Weather Sites</span>
+            <svg xmlns="http://www.w3.org/2000/svg" id="svgLinksChevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s ease;"><path d="m18 15-6-6-6 6"/></svg>
+        </div>
+        <div class="links-wrapper" id="linksWrapper">
+            <a href="https://www.meteoswiss.admin.ch/home.html?tab=rain" target="_blank" rel="noopener noreferrer" class="ext-link-btn" title="Open MeteoSwiss Radar Map">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+                MeteoSwiss Radar
+            </a>
+            <a href="https://www.meteoswiss.admin.ch/home.html?tab=clouds" target="_blank" rel="noopener noreferrer" class="ext-link-btn" title="Open MeteoSwiss Clouds/Satellite Map">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.25.26a7 7 0 1 0-13.75 3.24c0 2.48 2.02 4.5 4.5 4.5h12Z"/></svg>
+                MeteoSwiss Clouds
+            </a>
+            <a href="https://www.meteoradar.ch/bilder/mch_aktuell.php" target="_blank" rel="noopener noreferrer" class="ext-link-btn" title="Open Meteoradar Current Weather Index">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                Meteoradar Aktuell
+            </a>
+        </div>
+    </div>
+
+    <!-- Hidden Toggle Button (shows when panel is closed) -->
+    <button class="dashboard-toggle" id="btnToggleDashboard" style="display: none;" title="Show Controls">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+
+    <!-- Main Dashboard Overlay Panel -->
+    <div class="dashboard" id="dashboardPanel">
+        <!-- Brand Header -->
+        <div class="header">
+            <div class="brand">
+                <div class="brand-icon-wrapper">
+                    <span class="brand-pulse"></span>
+                    <span class="brand-dot"></span>
+                </div>
+                <h1 class="brand-title">RAINRADAR</h1>
+                <div class="spinner-wrapper" id="loadingSpinner" title="Loading Tiles...">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <button class="btn-icon" id="btnMyLocation" title="My Location">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-icon" id="btnCopyLink" title="Copy Shareable Link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </button>
+                <button class="btn-icon" id="btnToggleCompact" title="Toggle Compact View">
+                    <!-- chevron-up (minimize) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" id="svgCompactMinimize" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    <!-- chevron-down (expand) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" id="svgCompactMaximize" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <button class="btn-icon" id="btnCloseDashboard" title="Hide Controls">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Coordinates Status Panel -->
+        <div class="location-info">
+            <div class="location-coords-row">
+                <span class="location-label">Center Point</span>
+                <span class="location-val" id="lblCoordinates">47.6600, 9.1700</span>
+            </div>
+            <div class="location-stats">
+                <span>Radius: <strong id="lblRadius">50 km</strong></span>
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    Zoom: 
+                    <button class="btn-zoom-adjust" id="btnZoomOut" title="Zoom Out">-</button>
+                    <strong id="lblZoom" style="min-width: 16px; text-align: center;">10</strong>
+                    <button class="btn-zoom-adjust" id="btnZoomIn" title="Zoom In">+</button>
+                </span>
+            </div>
+        </div>
+
+        <!-- Basemap Toggle Slider -->
+        <div class="segment-control">
+            <button class="segment-btn active" id="btnBasemapMap" data-basemap="map">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+                Standard
+            </button>
+            <button class="segment-btn" id="btnBasemapSatellite" data-basemap="satellite">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                Satellite
+            </button>
+        </div>
+
+        <!-- Animation Timeline Dashboard -->
+        <div class="timeline-section">
+            <div class="time-display">
+                <h2 id="lblTimestamp">--:-- --</h2>
+                <p id="lblDate">Loading radar frames...</p>
+            </div>
+
+            <!-- Scrubber Slider -->
+            <div class="scrubber-container">
+                <div class="slider-wrapper">
+                    <input type="range" class="scrubber" id="timelineScrubber" min="0" max="0" value="0" step="1">
+                </div>
+                <div class="scrubber-labels">
+                    <span id="lblTimeStart">-2 hours</span>
+                    <span style="font-weight: 500;" id="lblTimeCurrent">Now</span>
+                </div>
+            </div>
+
+            <!-- Playback Loop Buttons -->
+            <div class="playback-controls">
+                <button class="btn-step" id="btnPrevFrame" title="Previous Frame">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="btn-play" id="btnPlayPause" title="Play Animation">
+                    <svg xmlns="http://www.w3.org/2000/svg" id="svgPlayIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" id="svgPauseIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><line x1="10" y1="4" x2="10" y2="20"/><line x1="14" y1="4" x2="14" y2="20"/></svg>
+                </button>
+                <button class="btn-step" id="btnNextFrame" title="Next Frame">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+
+            <!-- Speed control -->
+            <div class="speed-control">
+                <button class="speed-btn" id="btnSpeedSlow" data-speed="1000">Slow</button>
+                <button class="speed-btn active" id="btnSpeedNormal" data-speed="500">Normal</button>
+                <button class="speed-btn" id="btnSpeedFast" data-speed="250">Fast</button>
+            </div>
+        </div>
+
+        <!-- Setting Adjusters -->
+        <div class="settings-panel">
+            <div class="setting-row">
+                <div class="setting-label-group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+                    <span>Show Radar Overlay</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="chkRadarToggle" checked>
+                    <span class="slider-switch"></span>
+                </label>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-label-group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 1 0 0-12Z"/></svg>
+                    <span>Opacity</span>
+                </div>
+                <div class="opacity-container">
+                    <input type="range" class="opacity-slider" id="sliderOpacity" min="0" max="100" value="80">
+                    <span class="opacity-val" id="lblOpacityVal">80%</span>
+                </div>
+            </div>
+            
+            <div class="setting-row" style="align-items: flex-start;">
+                <div class="setting-label-group" style="flex-direction: column; align-items: flex-start; gap: 2px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><path d="M8 16h.01"/><path d="M8 20h.01"/><path d="M12 18h.01"/><path d="M12 22h.01"/><path d="M16 16h.01"/><path d="M16 20h.01"/></svg>
+                        <span style="font-size: 13px; font-weight: 500;">Winter Snow Mode</span>
+                    </div>
+                    <span style="font-size: 10px; color: var(--text-secondary); margin-left: 24px;">Show snow in distinct colors</span>
+                </div>
+                <label class="switch" style="margin-top: 2px;">
+                    <input type="checkbox" id="chkSnowToggle">
+                    <span class="slider-switch"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Legend Display -->
+        <div class="legend-panel">
+            <div class="legend-header">
+                <span id="lblLegendType">Precipitation Legend</span>
+                <span style="font-weight: 500;">mm/h</span>
+            </div>
+            <div class="legend-bar rain" id="barLegendColors"></div>
+            <div class="legend-labels" id="barLegendLabels">
+                <span>0.1</span>
+                <span>1.0</span>
+                <span>2.5</span>
+                <span>5.0</span>
+                <span>10</span>
+                <span>25</span>
+                <span>50+</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map container -->
+    <div id="map"></div>
+
+    <!-- Alert toast for clipboard copy -->
+    <div class="toast" id="clipboardToast">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Link copied to clipboard!
+    </div>
+
+    <!-- Leaflet.js script -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Application Logic -->
+    <script>
+        // === CONFIGURATION & DEFAULTS ===
+        const DEFAULT_LAT = 47.66;
+        const DEFAULT_LON = 9.17;
+        const DEFAULT_KM = 50;
+        const API_URL = "https://api.rainviewer.com/public/weather-maps.json";
+
+        // === STATE VARIABLES ===
+        let lat = DEFAULT_LAT;
+        let lon = DEFAULT_LON;
+        let km = DEFAULT_KM;
+        let zoom = 10;
+        
+        let apiData = {};
+        let mapFrames = [];
+        let animationPosition = 0;
+        let animationTimer = null;
+        let isPlaying = false;
+        let isTileLoading = false;
+        
+        let radarOpacity = 0.8;
+        let animationSpeed = 500; // ms per frame
+        let isSnowEnabled = false;
+        let isSmoothEnabled = true;
+        let isRadarVisible = true;
+
+        let map = null;
+        let marker = null;
+        let currentBasemapType = 'map';
+        let currentRadarLayer = null;
+        
+        // Cache object to hold loaded Leaflet TileLayers
+        let layerCache = {};
+        
+        // Tile sizing based on high-DPI screens
+        const TILE_SIZE = window.devicePixelRatio >= 2 ? 512 : 256;
+
+        // Map tile sources
+        const basemaps = {
+            map: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 18,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            })
+        };
+
+        // === MAP CALCULATION HELPERS ===
+        
+        // Convert visible radius (km) to Leaflet zoom level correcting for latitude distortion
+        function kmToZoom(kmVal, latVal) {
+            const mapContainer = document.getElementById('map');
+            const mapWidth = mapContainer ? mapContainer.clientWidth : 800;
+            const latRad = latVal * Math.PI / 180;
+            // Circumference at latitude
+            const earthCircumference = 40075016 * Math.cos(latRad);
+            const radiusMeters = kmVal * 1000;
+            // We want diameter (2 * radiusMeters) to fit inside viewport mapWidth
+            // 2^zoom = (mapWidth * earthCircumference) / (512 * radiusMeters)
+            const val = (mapWidth * earthCircumference) / (512 * radiusMeters);
+            const calculatedZoom = Math.floor(Math.log2(val));
+            return Math.max(1, Math.min(18, calculatedZoom));
+        }
+
+        // Convert Leaflet zoom level to visible radius (km) at a specific latitude
+        function zoomToKm(zoomVal, latVal) {
+            const mapContainer = document.getElementById('map');
+            const mapWidth = mapContainer ? mapContainer.clientWidth : 800;
+            const latRad = latVal * Math.PI / 180;
+            const earthCircumference = 40075016 * Math.cos(latRad);
+            // Reverse zoom calculation
+            const radiusMeters = (mapWidth * earthCircumference) / (512 * Math.pow(2, zoomVal));
+            return Math.round((radiusMeters / 1000) * 10) / 10;
+        }
+
+        // === PARSE & SYNC URL PARAMETERS ===
+        
+        function parseUrlParameters() {
+            const params = new URLSearchParams(window.location.search);
+            
+            const urlLat = parseFloat(params.get('lat'));
+            const urlLon = parseFloat(params.get('lon'));
+            const urlKm = parseFloat(params.get('km'));
+            
+            lat = (!isNaN(urlLat) && urlLat >= -90 && urlLat <= 90) ? urlLat : DEFAULT_LAT;
+            lon = (!isNaN(urlLon) && urlLon >= -180 && urlLon <= 180) ? urlLon : DEFAULT_LON;
+            km = (!isNaN(urlKm) && urlKm > 0) ? urlKm : DEFAULT_KM;
+            
+            // Calculate zoom
+            zoom = kmToZoom(km, lat);
+        }
+
+        function syncParametersToUrl() {
+            const currentCenter = map.getCenter();
+            const currentZoom = map.getZoom();
+            const currentKm = zoomToKm(currentZoom, currentCenter.lat);
+            
+            // Sync values to local state variables
+            lat = Math.round(currentCenter.lat * 4) / 4 === Math.round(marker.getLatLng().lat * 4) / 4 ? marker.getLatLng().lat : currentCenter.lat;
+            lon = Math.round(currentCenter.lng * 4) / 4 === Math.round(marker.getLatLng().lng * 4) / 4 ? marker.getLatLng().lng : currentCenter.lng;
+            
+            const roundedLat = Math.round(lat * 10000) / 10000;
+            const roundedLon = Math.round(lon * 10000) / 10000;
+            
+            // Update UI coordinates
+            document.getElementById('lblCoordinates').innerText = `${roundedLat.toFixed(4)}, ${roundedLon.toFixed(4)}`;
+            document.getElementById('lblRadius').innerText = `${currentKm.toFixed(1)} km`;
+            document.getElementById('lblZoom').innerText = currentZoom;
+            
+            const params = new URLSearchParams();
+            params.set('lat', roundedLat);
+            params.set('lon', roundedLon);
+            params.set('km', Math.round(currentKm));
+            
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // === SETUP MAP & INTERFACE ===
+        
+        function initMap() {
+            parseUrlParameters();
+            
+            // Initialize leaflet map (hide default zoom control, disable mouse/gesture/touch zoom)
+            map = L.map('map', {
+                zoomControl: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                touchZoom: false,
+                keyboard: false,
+                minZoom: 1,
+                maxZoom: 18
+            }).setView([lat, lon], zoom);
+
+            // Add standard basemap
+            basemaps.map.addTo(map);
+
+            // Create draggable marker
+            marker = L.marker([lat, lon], {
+                draggable: true
+            }).addTo(map);
+
+            // Setup Marker drag listeners
+            marker.on('drag', function() {
+                const pos = marker.getLatLng();
+                document.getElementById('lblCoordinates').innerText = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
+            });
+
+            marker.on('dragend', function() {
+                syncParametersToUrl();
+                // Optionally pan map to the marker position smoothly
+                map.panTo(marker.getLatLng());
+            });
+
+            // Map interaction listeners
+            map.on('moveend', syncParametersToUrl);
+            
+            map.on('zoomstart', () => {
+                // Clear cache & pause animation during zoom transitions (the "flashing" logic)
+                stopAnimation();
+                flushRadarCache();
+            });
+            
+            map.on('zoomend', () => {
+                syncParametersToUrl();
+                // Redraw active frame at new zoom level immediately
+                showFrame(animationPosition);
+            });
+
+            // Update UI labels immediately
+            document.getElementById('lblCoordinates').innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            document.getElementById('lblRadius').innerText = `${km.toFixed(1)} km`;
+            document.getElementById('lblZoom').innerText = zoom;
+        }
+
+        // === RAINVIEWER API & TILES IMPLEMENTATION ===
+        
+        function createRadarLayer(frame) {
+            // Path structure: {host}{path}/{size}/{z}/{x}/{y}/{color}/{options}.png
+            // Universal Blue scheme index is 2
+            const colorScheme = 2; 
+            const smooth = isSmoothEnabled ? 1 : 0;
+            const snow = isSnowEnabled ? 1 : 0;
+            
+            const urlTemplate = `${apiData.host}${frame.path}/${TILE_SIZE}/{z}/{x}/{y}/${colorScheme}/${smooth}_${snow}.png`;
+            
+            const layer = L.tileLayer(urlTemplate, {
+                tileSize: 256,
+                opacity: 0.001, // Created invisible initially to preload tiles
+                maxNativeZoom: 7, // API max zoom for weather overlay
+                maxZoom: 18
+            });
+            
+            layer.$isLoaded = false;
+            layer.on('load', () => {
+                layer.$isLoaded = true;
+            });
+            
+            return layer;
+        }
+
+        function clearLayerCache() {
+            stopAnimation();
+            for (let pos in layerCache) {
+                if (parseInt(pos) !== animationPosition) {
+                    map.removeLayer(layerCache[pos]);
+                    delete layerCache[pos];
+                }
+            }
+        }
+
+        function flushRadarCache() {
+            stopAnimation();
+            for (let pos in layerCache) {
+                map.removeLayer(layerCache[pos]);
+            }
+            layerCache = {};
+            currentRadarLayer = null;
+        }
+
+        // Preload upcoming frames in the background to prevent flicker during transitions
+        function preloadFrame(position) {
+            position = wrapPosition(position);
+            if (!layerCache[position] && mapFrames.length > 0) {
+                const frame = mapFrames[position];
+                const layer = createRadarLayer(frame);
+                layer.addTo(map);
+                layerCache[position] = layer;
+            }
+        }
+
+        function preloadNextFrames(currentPos, count = 3) {
+            for (let i = 1; i <= count; i++) {
+                preloadFrame(currentPos + i);
+            }
+        }
+
+        function wrapPosition(position) {
+            if (mapFrames.length === 0) return 0;
+            while (position >= mapFrames.length) {
+                position -= mapFrames.length;
+            }
+            while (position < 0) {
+                position += mapFrames.length;
+            }
+            return position;
+        }
+
+        function updateFrameUI(position) {
+            if (mapFrames.length === 0) return;
+            const frame = mapFrames[position];
+            
+            // Format timestamp (Local time)
+            const dateObj = new Date(frame.time * 1000);
+            
+            // Lbl large time
+            document.getElementById('lblTimestamp').innerText = dateObj.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            // Lbl subtitle date
+            document.getElementById('lblDate').innerText = dateObj.toLocaleDateString([], { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            // Update range scrubber input value
+            const scrubber = document.getElementById('timelineScrubber');
+            scrubber.value = position;
+        }
+
+        function showFrame(position) {
+            if (mapFrames.length === 0) return;
+
+            position = wrapPosition(position);
+            const frame = mapFrames[position];
+
+            updateFrameUI(position);
+
+            const oldLayer = currentRadarLayer;
+            const cachedLayer = layerCache[position];
+
+            const spinner = document.getElementById('loadingSpinner');
+
+            const activeOpacity = isRadarVisible ? radarOpacity : 0;
+
+            if (cachedLayer) {
+                if (cachedLayer.$isLoaded) {
+                    // Layer is already loaded/cached and fully ready - fade in instantly
+                    cachedLayer.setOpacity(activeOpacity);
+                    if (oldLayer && oldLayer !== cachedLayer) {
+                        oldLayer.setOpacity(0);
+                    }
+                    currentRadarLayer = cachedLayer;
+                    animationPosition = position;
+                    
+                    // Preload surrounding frames
+                    preloadNextFrames(position);
+
+                    if (isPlaying) {
+                        animationTimer = setTimeout(playNextFrame, animationSpeed);
+                    }
+                } else {
+                    // Layer was preloaded in background but has not finished downloading yet
+                    isTileLoading = true;
+                    spinner.classList.add('show');
+                    
+                    cachedLayer.once('load', function() {
+                        isTileLoading = false;
+                        spinner.classList.remove('show');
+                        
+                        if (animationPosition === position) {
+                            cachedLayer.setOpacity(activeOpacity);
+                            if (oldLayer && oldLayer !== cachedLayer) {
+                                oldLayer.setOpacity(0);
+                            }
+                            currentRadarLayer = cachedLayer;
+                            
+                            preloadNextFrames(position);
+
+                            if (isPlaying) {
+                                animationTimer = setTimeout(playNextFrame, animationSpeed);
+                            }
+                        }
+                    });
+                    animationPosition = position;
+                }
+            } else {
+                // Layer doesn't exist, create it and load tiles
+                isTileLoading = true;
+                spinner.classList.add('show');
+                
+                const newLayer = createRadarLayer(frame);
+                
+                newLayer.on('load', function() {
+                    isTileLoading = false;
+                    spinner.classList.remove('show');
+                    
+                    if (animationPosition === position) {
+                        newLayer.setOpacity(activeOpacity);
+                        if (oldLayer && oldLayer !== newLayer) {
+                            oldLayer.setOpacity(0);
+                        }
+                        currentRadarLayer = newLayer;
+                        
+                        preloadNextFrames(position);
+
+                        if (isPlaying && animationPosition === position) {
+                            animationTimer = setTimeout(playNextFrame, animationSpeed);
+                        }
+                    } else {
+                        // User moved past this frame before loading finished, keep it cached but hidden
+                        newLayer.setOpacity(0.001);
+                    }
+                });
+
+                newLayer.addTo(map);
+                newLayer.setOpacity(0.001); // invisible loading
+                layerCache[position] = newLayer;
+                animationPosition = position;
+            }
+        }
+
+        // === PLAYBACK CONTROLS ===
+
+        function stopAnimation() {
+            if (animationTimer) {
+                clearTimeout(animationTimer);
+                animationTimer = null;
+            }
+            isPlaying = false;
+            
+            // Toggle icons
+            document.getElementById('svgPlayIcon').style.display = 'block';
+            document.getElementById('svgPauseIcon').style.display = 'none';
+            document.getElementById('btnPlayPause').title = "Play Animation";
+        }
+
+        function startAnimation() {
+            stopAnimation(); // reset existing timer
+            isPlaying = true;
+            
+            // Toggle icons
+            document.getElementById('svgPlayIcon').style.display = 'none';
+            document.getElementById('svgPauseIcon').style.display = 'block';
+            document.getElementById('btnPlayPause').title = "Pause Animation";
+            
+            playNextFrame();
+        }
+
+        function togglePlayPause() {
+            if (isPlaying) {
+                stopAnimation();
+            } else {
+                startAnimation();
+            }
+        }
+
+        function playNextFrame() {
+            if (!isPlaying) return;
+            showFrame(animationPosition + 1);
+        }
+
+        function stepFrame(direction) {
+            stopAnimation();
+            showFrame(animationPosition + direction);
+        }
+
+        function changeSpeed(msDelay, activeBtnId) {
+            animationSpeed = msDelay;
+            
+            // Update active state in UI button row
+            const buttons = ['btnSpeedSlow', 'btnSpeedNormal', 'btnSpeedFast'];
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                if (id === activeBtnId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // If playing, restart the timer with the new speed delay
+            if (isPlaying) {
+                startAnimation();
+            }
+        }
+
+        function rebuildRadarLayers() {
+            stopAnimation();
+            // Remove cached radar layers from map
+            for (let pos in layerCache) {
+                map.removeLayer(layerCache[pos]);
+            }
+            layerCache = {};
+            currentRadarLayer = null;
+            // Redraw current frame
+            showFrame(animationPosition);
+        }
+
+        // === UI INTERACTION LISTENERS ===
+        
+        function setupEventListeners() {
+            // Dashboard Collapsing & Expanding
+            const dashboard = document.getElementById('dashboardPanel');
+            const toggleBtn = document.getElementById('btnToggleDashboard');
+            const closeBtn = document.getElementById('btnCloseDashboard');
+
+            const btnToggleCompact = document.getElementById('btnToggleCompact');
+            const svgMin = document.getElementById('svgCompactMinimize');
+            const svgMax = document.getElementById('svgCompactMaximize');
+
+            const externalPanel = document.getElementById('externalLinksPanel');
+            const btnToggleLinks = document.getElementById('btnToggleLinks');
+
+            // Restore states from localStorage on initialization
+            const linksCollapsed = localStorage.getItem('radar_links_collapsed') === 'true';
+            if (linksCollapsed) {
+                externalPanel.classList.add('collapsed');
+            }
+
+            const dashboardCompact = localStorage.getItem('radar_dashboard_compact') === 'true';
+            if (dashboardCompact) {
+                dashboard.classList.add('compact');
+                svgMin.style.display = 'none';
+                svgMax.style.display = 'block';
+            }
+
+            closeBtn.addEventListener('click', () => {
+                dashboard.classList.add('collapsed');
+                toggleBtn.style.display = 'flex';
+            });
+
+            toggleBtn.addEventListener('click', () => {
+                dashboard.classList.remove('collapsed');
+                toggleBtn.style.display = 'none';
+            });
+
+            // Toggle Compact Mode
+            btnToggleCompact.addEventListener('click', () => {
+                const isCompact = dashboard.classList.toggle('compact');
+                localStorage.setItem('radar_dashboard_compact', isCompact);
+                if (isCompact) {
+                    svgMin.style.display = 'none';
+                    svgMax.style.display = 'block';
+                } else {
+                    svgMin.style.display = 'block';
+                    svgMax.style.display = 'none';
+                }
+            });
+
+            // Toggle Links Panel
+            btnToggleLinks.addEventListener('click', () => {
+                const isCollapsed = externalPanel.classList.toggle('collapsed');
+                localStorage.setItem('radar_links_collapsed', isCollapsed);
+            });
+
+            // Basemap toggling
+            document.getElementById('btnBasemapMap').addEventListener('click', () => {
+                if (currentBasemapType !== 'map') {
+                    map.removeLayer(basemaps.satellite);
+                    basemaps.map.addTo(map);
+                    currentBasemapType = 'map';
+                    document.getElementById('btnBasemapMap').classList.add('active');
+                    document.getElementById('btnBasemapSatellite').classList.remove('active');
+                }
+            });
+
+            document.getElementById('btnBasemapSatellite').addEventListener('click', () => {
+                if (currentBasemapType !== 'satellite') {
+                    map.removeLayer(basemaps.map);
+                    basemaps.satellite.addTo(map);
+                    currentBasemapType = 'satellite';
+                    document.getElementById('btnBasemapSatellite').classList.add('active');
+                    document.getElementById('btnBasemapMap').classList.remove('active');
+                }
+            });
+
+            // Zoom adjustments
+            document.getElementById('btnZoomIn').addEventListener('click', () => {
+                map.zoomIn();
+            });
+            
+            document.getElementById('btnZoomOut').addEventListener('click', () => {
+                map.zoomOut();
+            });
+
+            // Geolocation: My Location
+            document.getElementById('btnMyLocation').addEventListener('click', () => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const newLat = position.coords.latitude;
+                            const newLon = position.coords.longitude;
+                            
+                            // Update marker and center map
+                            marker.setLatLng([newLat, newLon]);
+                            map.setView([newLat, newLon], map.getZoom());
+                            
+                            // Synchronize parameters
+                            syncParametersToUrl();
+                        },
+                        (error) => {
+                            alert("Unable to retrieve location. Please check your browser permissions.");
+                        }
+                    );
+                } else {
+                    alert("Geolocation is not supported by your browser.");
+                }
+            });
+
+            // Shareable Link Copy
+            document.getElementById('btnCopyLink').addEventListener('click', () => {
+                navigator.clipboard.writeText(window.location.href)
+                    .then(() => {
+                        const toast = document.getElementById('clipboardToast');
+                        toast.classList.add('show');
+                        setTimeout(() => {
+                            toast.classList.remove('show');
+                        }, 2500);
+                    })
+                    .catch(err => {
+                        alert("Could not copy link to clipboard: " + err);
+                    });
+            });
+
+            // Animation playback control hookups
+            document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
+            document.getElementById('btnPrevFrame').addEventListener('click', () => stepFrame(-1));
+            document.getElementById('btnNextFrame').addEventListener('click', () => stepFrame(1));
+
+            // Scrubber range listener
+            const scrubber = document.getElementById('timelineScrubber');
+            scrubber.addEventListener('input', (e) => {
+                stopAnimation();
+                showFrame(parseInt(e.target.value));
+            });
+
+            // Speed selectors hookup
+            document.getElementById('btnSpeedSlow').addEventListener('click', () => changeSpeed(1000, 'btnSpeedSlow'));
+            document.getElementById('btnSpeedNormal').addEventListener('click', () => changeSpeed(500, 'btnSpeedNormal'));
+            document.getElementById('btnSpeedFast').addEventListener('click', () => changeSpeed(220, 'btnSpeedFast'));
+
+            // Opacity slider
+            const sliderOpacity = document.getElementById('sliderOpacity');
+            sliderOpacity.addEventListener('input', (e) => {
+                radarOpacity = parseFloat(e.target.value) / 100.0;
+                document.getElementById('lblOpacityVal').innerText = `${e.target.value}%`;
+                
+                // Update opacity on active layer immediately
+                if (currentRadarLayer && isRadarVisible) {
+                    currentRadarLayer.setOpacity(radarOpacity);
+                }
+            });
+
+            // Radar toggle check
+            const chkRadar = document.getElementById('chkRadarToggle');
+            chkRadar.addEventListener('change', (e) => {
+                isRadarVisible = e.target.checked;
+                if (currentRadarLayer) {
+                    currentRadarLayer.setOpacity(isRadarVisible ? radarOpacity : 0);
+                }
+            });
+
+            // Snow toggle check
+            const chkSnow = document.getElementById('chkSnowToggle');
+            chkSnow.addEventListener('change', (e) => {
+                isSnowEnabled = e.target.checked;
+                
+                // Update legend UI dynamically
+                const legendColors = document.getElementById('barLegendColors');
+                const legendLabels = document.getElementById('barLegendLabels');
+                const legendType = document.getElementById('lblLegendType');
+                
+                if (isSnowEnabled) {
+                    legendColors.className = "legend-bar snow";
+                    legendType.innerText = "Snow Legend";
+                    legendLabels.innerHTML = `
+                        <span>Light</span>
+                        <span>Med</span>
+                        <span>Heavy</span>
+                        <span>Intense</span>
+                        <span>Extreme</span>
+                    `;
+                } else {
+                    legendColors.className = "legend-bar rain";
+                    legendType.innerText = "Precipitation Legend";
+                    legendLabels.innerHTML = `
+                        <span>0.1</span>
+                        <span>1.0</span>
+                        <span>2.5</span>
+                        <span>5.0</span>
+                        <span>10</span>
+                        <span>25</span>
+                        <span>50+</span>
+                    `;
+                }
+
+                // Redraw radar layers with updated URL parameters
+                rebuildRadarLayers();
+            });
+        }
+
+        // === API DATA INITIALIZATION ===
+        
+        function loadApiData() {
+            fetch(API_URL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Weather maps API response error');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    apiData = data;
+                    if (!apiData.radar || !apiData.radar.past || apiData.radar.past.length === 0) {
+                        document.getElementById('lblDate').innerText = "No radar frames available.";
+                        return;
+                    }
+
+                    mapFrames = apiData.radar.past;
+                    
+                    // Setup scrubber boundaries
+                    const scrubber = document.getElementById('timelineScrubber');
+                    scrubber.max = mapFrames.length - 1;
+                    scrubber.value = mapFrames.length - 1;
+
+                    // Set scrubber labels
+                    const startObj = new Date(mapFrames[0].time * 1000);
+                    const nowObj = new Date(mapFrames[mapFrames.length - 1].time * 1000);
+                    
+                    document.getElementById('lblTimeStart').innerText = startObj.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    document.getElementById('lblTimeCurrent').innerText = nowObj.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+
+                    // Cache and clear initial setup
+                    layerCache = {};
+                    currentRadarLayer = null;
+                    animationPosition = mapFrames.length - 1;
+
+                    // Trigger drawing of latest frame (starts cached pre-loading automatically)
+                    showFrame(animationPosition);
+                })
+                .catch(error => {
+                    console.error("API error loading RainViewer radar frames:", error);
+                    document.getElementById('lblDate').innerText = "Unable to contact API.";
+                    alert("Error connection: Failed to load weather radar data from RainViewer API.");
+                });
+        }
+
+        // === APPLICATION STARTUP ===
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            setupEventListeners();
+            loadApiData();
+        });
+    </script>
+</body>
+</html>

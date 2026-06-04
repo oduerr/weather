@@ -940,4 +940,46 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Keyboard navigation shortcuts (Escape, ArrowUp, ArrowDown)
+  document.addEventListener('keydown', function(event) {
+    // Avoid interfering with input elements, selects, or textareas
+    if (['input', 'select', 'textarea'].includes(event.target.tagName.toLowerCase())) {
+      return;
+    }
+
+    // 1. Escape key: Toggle controls visibility (acting as a shortcut for the eye button)
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (isControlsVisible) {
+        hideControls();
+      } else {
+        showControls();
+      }
+    }
+
+    // 2. ArrowUp / ArrowDown keys: Switch between metric panels
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      const panelSelect = document.getElementById('panelSelect');
+      if (!panelSelect) return;
+
+      const options = Array.from(panelSelect.options);
+      let currentIndex = panelSelect.selectedIndex;
+
+      if (event.key === 'ArrowDown') {
+        currentIndex = (currentIndex + 1) % options.length;
+      } else {
+        currentIndex = (currentIndex - 1 + options.length) % options.length;
+      }
+
+      panelSelect.selectedIndex = currentIndex;
+      
+      // Dispatch change event to trigger panel switch logic
+      panelSelect.dispatchEvent(new Event('change'));
+      
+      // Auto-reveal the control panel when switching metric views
+      showControls();
+    }
+  });
 });

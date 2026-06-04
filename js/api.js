@@ -527,23 +527,41 @@ window.WeatherAPI.getBrightSkyPastDays = async function(dates) {
     const temps = obs.map(o => o.temperature).filter(t => t != null && !isNaN(t));
     if (!temps.length) return null;
 
-    const slices = [6, 12, 21].map(targetHour => {
+    // Precipitation windows: sum all observations in the period ending at each slice.
+    // Morning = midnight–06:00, Midday = 06:00–12:00, Evening = 12:00–21:00
+    const WINDOWS = [
+      { hour: 6,  from: 0,  to: 6  },
+      { hour: 12, from: 6,  to: 12 },
+      { hour: 21, from: 12, to: 21 },
+    ];
+
+    // Helper: get Berlin hour for an observation
+    const berlinHour = o => parseInt(
+      new Date(o.timestamp).toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' })
+        .replace(' ', 'T').split('T')[1], 10
+    );
+
+    const slices = WINDOWS.map(({ hour, from, to }) => {
+      // Representative observation for icon/temp/wind: nearest to slice hour
       let best = null, bestDiff = Infinity;
       obs.forEach(o => {
-        const local = new Date(o.timestamp)
-          .toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
-        const h = parseInt(local.split('T')[1], 10);
-        const diff = Math.abs(h - targetHour);
+        const diff = Math.abs(berlinHour(o) - hour);
         if (diff < bestDiff) { bestDiff = diff; best = o; }
       });
-      if (!best || bestDiff > 3) return { hour: targetHour, icon: '—', temp: '—', precip: null, windBft: '—', gustBft: '—', isPast: true };
+
+      // Sum precipitation across the window
+      const windowPrecip = obs
+        .filter(o => { const h = berlinHour(o); return h >= from && h < to; })
+        .reduce((sum, o) => sum + (o.precipitation ?? o.precipitation_10 ?? 0), 0);
+
+      if (!best || bestDiff > 3) return { hour, icon: '—', temp: '—', precip: Math.round(windowPrecip * 10) / 10, windBft: '—', gustBft: '—', isPast: true };
       const wind = best.wind_speed ?? best.wind_speed_10 ?? 0;
       const gust = best.wind_gust ?? best.wind_gust_speed_10 ?? best.wind_gust_speed ?? 0;
       return {
-        hour: targetHour,
+        hour,
         icon: ICON_MAP[best.icon] || '⛅',
         temp: best.temperature != null ? Math.round(best.temperature) : '—',
-        precip: best.precipitation_10 != null ? Math.round(best.precipitation_10 * 10) / 10 : 0,
+        precip: Math.round(windowPrecip * 10) / 10,
         windBft: bft(wind),
         gustBft: bft(gust),
         isPast: true

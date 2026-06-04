@@ -422,7 +422,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     width: window.innerWidth,
     height: window.innerHeight * 0.98,
     margin: compact
-      ? { l: 32, r: 32, t: 25, b: 42 }
+      ? { l: 32, r: 32, t: 40, b: 42 }
       : { l: 60, r: 60, t: 40, b: 55 },
 
     xaxis: {
@@ -871,7 +871,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     width: window.innerWidth,
     height: Math.max(window.innerHeight - 120, 400),
     margin: compact
-      ? { l: 32, r: 32, t: 25, b: 42 }
+      ? { l: 32, r: 32, t: 40, b: 42 }
       : { l: 60, r: 60, t: 40, b: 55 },
 
     xaxis: {

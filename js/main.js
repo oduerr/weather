@@ -1014,12 +1014,29 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       panelSelect.selectedIndex = currentIndex;
-      
-      // Dispatch change event to trigger panel switch logic
       panelSelect.dispatchEvent(new Event('change'));
-      
-      // Auto-reveal the control panel when switching metric views
       showControls();
+    }
+
+    // 3. View range: 1, 2, 5, a
+    if (event.key === '1') { event.preventDefault(); document.getElementById('view1d')?.click(); }
+    if (event.key === '2') { event.preventDefault(); document.getElementById('view2d')?.click(); }
+    if (event.key === '5') { event.preventDefault(); document.getElementById('view5d')?.click(); }
+    if (event.key === 'a') { event.preventDefault(); document.getElementById('viewAll')?.click(); }
+
+    // 4. Panel shortcuts: t, u, c, o, r
+    const panelKeys = { t: 'temperature', u: 'uv_wind', c: 'compare', o: 'overview' };
+    if (panelKeys[event.key]) {
+      event.preventDefault();
+      const sel = document.getElementById('panelSelect');
+      if (sel) { sel.value = panelKeys[event.key]; sel.dispatchEvent(new Event('change')); }
+    }
+
+    // 5. r — open Radar in new tab
+    if (event.key === 'r') {
+      event.preventDefault();
+      const p = new URLSearchParams(window.location.search);
+      window.open('./radar.html?lat=' + (p.get('lat') || '47.6952') + '&lon=' + (p.get('lon') || '9.1307'), '_blank');
     }
   });
 });

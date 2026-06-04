@@ -394,7 +394,7 @@ window.ComparePanel = {
               y: times.map(() => yVal),
               mode: 'text',
               text: icons,
-              textfont: { size: 13 },
+              textfont: { size: 26 },
               name: `${displayName} icons`,
               legendgroup: model.id,
               showlegend: false,

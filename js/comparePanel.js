@@ -99,9 +99,7 @@ window.ComparePanel = {
       responsive: true,
       displayModeBar: false
     }).then(() => {
-      if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
-        window.ViewportPreserver.applyIfPending();
-      }
+      if (typeof window.applyActiveView === 'function') window.applyActiveView();
     });
 
     // Store time range on chartDiv so view buttons can relayout

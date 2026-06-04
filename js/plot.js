@@ -475,13 +475,12 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     const plotDiv = document.getElementById('plot');
     const startTime = plotDiv.getAttribute('data-start-time');
     const endTime = plotDiv.getAttribute('data-end-time');
-    if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
-      window.ViewportPreserver.applyIfPending();
+    if (typeof window.applyActiveView === 'function') {
+      window.applyActiveView();
     } else {
       Plotly.relayout('plot', { 'xaxis.range': [startTime, endTime] });
     }
 
-    // Sync checkbox state in controls bar
     const dewCb = document.getElementById('dewPointToggle');
     if (dewCb) dewCb.checked = window.WeatherPlot._showDewPoint;
   });
@@ -930,12 +929,10 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     const plotDiv = document.getElementById('plot');
     const startTime = plotDiv.getAttribute('data-start-time');
     const endTime = plotDiv.getAttribute('data-end-time');
-    if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
-      window.ViewportPreserver.applyIfPending();
+    if (typeof window.applyActiveView === 'function') {
+      window.applyActiveView();
     } else {
-      Plotly.relayout('plot', {
-        'xaxis.range': [startTime, endTime]
-      });
+      Plotly.relayout('plot', { 'xaxis.range': [startTime, endTime] });
     }
   });
 };

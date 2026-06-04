@@ -381,7 +381,7 @@ function toggleHelpOverlay() {
       ['1', '1 day'], ['2', '2 days'], ['5', '5 days'], ['a', 'All data'],
     ]},
     { title: '📊 Panels', rows: [
-      ['t', 'Temperature'], ['u', 'UV & Wind'], ['c', 'Compare'], ['o', 'Overview'], ['r', 'Open Radar'],
+      ['t', 'Temperature'], ['u', 'UV & Wind'], ['w', 'UV & Wind'], ['c', 'Compare'], ['o', 'Overview'], ['r', 'Open Radar'],
     ]},
     { title: '🧭 Navigation', rows: [
       ['← →', 'Pan time axis'], ['↑ ↓', 'Cycle panels'],
@@ -835,19 +835,42 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 100);
 });
 
+// Track the active view range so it survives panel switches
+window._activeViewDays = null; // null = all data, number = days
+
+window.applyActiveView = function applyActiveView() {
+  const days = window._activeViewDays;
+  const panel = document.getElementById('panelSelect')?.value;
+  if (panel === 'compare' && window.ComparePanel) {
+    if (days === null) window.ComparePanel.viewAll();
+    else window.ComparePanel.relayoutView(days);
+  } else if (window.WeatherPlot) {
+    if (days === null) {
+      const p = document.getElementById('plot');
+      if (p && p.classList.contains('js-plotly-plot'))
+        Plotly.relayout('plot', { 'xaxis.range': [p.getAttribute('data-start-time'), p.getAttribute('data-end-time')] });
+    } else if (days === 1 && typeof window.WeatherPlot.viewOneDay === 'function') {
+      window.WeatherPlot.viewOneDay();
+    } else {
+      window.WeatherPlot.adjustViewRange(days);
+    }
+  }
+};
+
 // Add View Range Button Event Handlers with URL updates
 document.getElementById("view1d").addEventListener("click", function() {
+  window._activeViewDays = 1;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.viewOneDay();
   } else if (window.WeatherPlot && typeof window.WeatherPlot.viewOneDay === 'function') {
     window.WeatherPlot.viewOneDay();
   }
-  // Update URL with view parameter
   const currentState = getCurrentAppState();
   updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '1d');
 });
 
 document.getElementById("view2d").addEventListener("click", function() {
+  window._activeViewDays = 2;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.relayoutView(2);
   } else {
@@ -859,17 +882,18 @@ document.getElementById("view2d").addEventListener("click", function() {
 });
 
 document.getElementById("view5d").addEventListener("click", function() {
+  window._activeViewDays = 5;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.relayoutView(5);
   } else {
     window.WeatherPlot.adjustViewRange(5);
   }
-  // Update URL with view parameter
   const currentState = getCurrentAppState();
   updateUrlWithAppState(currentState.location, currentState.model, currentState.panel, '5d');
 });
 
 document.getElementById("viewAll").addEventListener("click", function() {
+  window._activeViewDays = null;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.viewAll();
   } else {
@@ -1078,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (event.key === 'a') { event.preventDefault(); document.getElementById('viewAll')?.click(); }
 
     // 4. Panel shortcuts: t, u, c, o, r
-    const panelKeys = { t: 'temperature', u: 'uv_wind', c: 'compare', o: 'overview' };
+    const panelKeys = { t: 'temperature', u: 'uv_wind', w: 'uv_wind', c: 'compare', o: 'overview' };
     if (panelKeys[event.key]) {
       event.preventDefault();
       const sel = document.getElementById('panelSelect');

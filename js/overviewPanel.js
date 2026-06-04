@@ -266,7 +266,8 @@ window.OverviewPanel = {
     const todayStr = new Date().toLocaleDateString('sv-SE');
 
     // Monday-align: find how many empty slots before first forecast day
-    const firstDow = days[0].dateObj.getDay(); // 0=Sun
+    // Use UTC noon to get day-of-week — avoids browser timezone ambiguity
+    const firstDow = new Date(days[0].date + 'T12:00:00Z').getUTCDay(); // 0=Sun
     const mondayOffset = firstDow === 0 ? 6 : firstDow - 1;
     const slots = [...Array(mondayOffset).fill(null), ...days];
 
@@ -303,9 +304,11 @@ window.OverviewPanel = {
 
       week.forEach(slot => {
         if (!slot) {
-          weekRow.appendChild(document.createElement('div'));
+          const spacer = document.createElement('div');
+          spacer.style.cssText = 'border-radius:12px;background:rgba(0,0,0,0.04);min-height:60px;';
+          weekRow.appendChild(spacer);
         } else {
-          const dow = new Date(slot.date + 'T12:00').getDay();
+          const dow = new Date(slot.date + 'T12:00:00Z').getUTCDay();
           const card = this.createDayCard(slot, isEnsemble, {
             isToday:   slot.date === todayStr,
             isWeekend: dow === 0 || dow === 6

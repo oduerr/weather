@@ -323,10 +323,10 @@ window.ComparePanel = {
   },
 
   _symbolSizeForDays: function(days) {
-    if (days <= 1.5) return 26;
-    if (days <= 2.5) return 20;
-    if (days <= 5.5) return 13;
-    return 9;
+    if (days <= 1.5) return 45;
+    if (days <= 2.5) return 30;
+    if (days <= 5.5) return 26;
+    return 18;
   },
 
   _restyleSymbolSize: function(days) {

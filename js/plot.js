@@ -189,7 +189,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
         x: validIdx.map(i => stationData.times[i]),
         y: validIdx.map(i => stationData.temperature[i]),
         mode: 'markers+lines',
-        name: 'Fogcast Station (°C)',
+        name: 'Own Station',
         line: { color: 'darkred', width: 1 },
         marker: { size: 3, color: 'darkred' },
         yaxis: "y1"
@@ -207,7 +207,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
         x: validIdx.map(i => bs.times[i]),
         y: validIdx.map(i => bs.temperature[i]),
         mode: 'markers+lines',
-        name: 'BrightSky (°C)',
+        name: 'BrightSky',
         line: { color: 'steelblue', width: 1, dash: 'dot' },
         marker: { size: 3, color: 'steelblue' },
         yaxis: "y1"

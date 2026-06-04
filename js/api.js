@@ -228,7 +228,8 @@ window.WeatherAPI.fetchBrightSkyHistoricalWeather = async function(currentDate) 
   const params = new URLSearchParams({
     lat: '47.6952',
     lon: '9.1307',
-    date: currentDate
+    date: currentDate,
+    tz: 'Europe/Berlin'
   });
 
   try {

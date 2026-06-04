@@ -36,9 +36,6 @@ window.SwipeNavigation = {
   handleTouchEnd: function(event) {
     if (!this.isEnabled || this.touchStartX === null) { this.reset(); return; }
 
-    // Only act when the controls bar is hidden
-    if (!this.controlsHidden()) { this.reset(); return; }
-
     const t      = event.changedTouches[0];
     const dx     = t.clientX - this.touchStartX;
     const dy     = t.clientY - this.touchStartY;

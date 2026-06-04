@@ -347,11 +347,17 @@ if (urlParams.panel && panelSelect) {
   const validPanels = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals', 'compare'];
   if (validPanels.includes(urlParams.panel)) {
     panelSelect.value = urlParams.panel;
-    console.log("Set panel from URL:", urlParams.panel);
   }
 } else if (panelSelect) {
   panelSelect.value = 'compare';
 }
+
+function updateModelRowVisibility() {
+  const panel = document.getElementById('panelSelect').value;
+  const row = document.getElementById('model-row');
+  if (row) row.style.display = panel === 'compare' ? 'none' : 'flex';
+}
+updateModelRowVisibility();
 
 // ------------------------------
 // 3) Fetch & Plot Function
@@ -723,16 +729,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     document.getElementById("panelSelect").addEventListener("change", function(event) {
-      // Update URL with new panel selection
+      updateModelRowVisibility();
       const currentState = getCurrentAppState();
       updateUrlWithAppState(
-        currentState.location, 
-        currentState.model, 
-        event.target.value, // Use the new panel directly
+        currentState.location,
+        currentState.model,
+        event.target.value,
         currentState.view
       );
-      console.log("Updated URL for panel change:", event.target.value);
-      
       window.fetchAndPlot();
     });
 

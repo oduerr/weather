@@ -203,17 +203,18 @@
 <body>
   <!-- 🔹 Mobile-Friendly Controls with Fade -->
   <div id="controls">
+    <!-- Row 1: Location | Radar + View buttons | Panel -->
     <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%;">
-      <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+      <div style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 120px;">
         <label for="locationSelect">📍</label>
         <div style="position: relative; flex: 1;">
           <select id="locationSelect"></select>
           <!-- Location Search Input (initially hidden) -->
           <div id="locationSearchContainer" style="display: none; position: relative;">
-            <input 
-              type="text" 
-              id="locationSearchInput" 
-              placeholder="Search for a location..." 
+            <input
+              type="text"
+              id="locationSearchInput"
+              placeholder="Search for a location..."
               style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-height: 44px; box-sizing: border-box;"
             />
             <div id="locationSearchResults" style="
@@ -234,30 +235,10 @@
           </div>
         </div>
       </div>
-      
-      <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
-        <label for="modelSelect">🌤️</label>
-        <select id="modelSelect"></select>
-      </div>
-      
-      <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
-        <label for="panelSelect">📊</label>
-            <select id="panelSelect">
-              <option value="overviewTable">📊 Overview Table</option>
-              <option value="overview">📅 Overview</option>
-              <option value="temperature">🌡️ Temperature</option>
-              <option value="uv_wind">☀️ UV & Wind</option>
-              <option value="actuals">📍 Actuals</option>
-              <option value="compare">🔀 Compare</option>
-            </select>
-      </div>
-    </div>
-    
-    <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px;">
+
       <button onclick="(() => { const p = new URLSearchParams(window.location.search); window.open('./radar.html?lat=' + (p.get('lat')||'47.6952') + '&lon=' + (p.get('lon')||'9.1307'), '_blank'); })()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #007AFF; background: #007AFF; color: white; font-size: 14px; min-height: 44px;">🌧️ Radar</button>
       <span id="konstanzTemperature"></span>
-      
-      <!-- Mobile-friendly View Range Buttons -->
+
       <div style="display: flex; gap: 4px;">
         <button id="view1d" class="view-btn">1d</button>
         <button id="view2d" class="view-btn">2d</button>
@@ -266,6 +247,24 @@
         <button id="navLeft" class="view-btn" title="Previous time period">◀</button>
         <button id="navRight" class="view-btn" title="Next time period">▶</button>
       </div>
+
+      <div style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 120px;">
+        <label for="panelSelect">📊</label>
+        <select id="panelSelect">
+          <option value="overviewTable">📊 Overview Table</option>
+          <option value="overview">📅 Overview</option>
+          <option value="temperature">🌡️ Temperature</option>
+          <option value="uv_wind">☀️ UV & Wind</option>
+          <option value="actuals">📍 Actuals</option>
+          <option value="compare">🔀 Compare</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 2: Model selector (hidden for Compare panel) -->
+    <div id="model-row" style="display: flex; align-items: center; gap: 4px; width: 100%; margin-top: 8px;">
+      <label for="modelSelect">🌤️</label>
+      <select id="modelSelect"></select>
     </div>
   </div>
 

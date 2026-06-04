@@ -835,31 +835,37 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 100);
 });
 
-// Track the active view range so it survives panel switches
-window._activeViewDays = null; // null = all data, number = days
+// Exact x-axis range saved by every function that changes the view.
+// null = show full data range.
+window._savedXRange = null;
 
-window.applyActiveView = function applyActiveView() {
-  const days = window._activeViewDays;
-  const panel = document.getElementById('panelSelect')?.value;
-  if (panel === 'compare' && window.ComparePanel) {
-    if (days === null) window.ComparePanel.viewAll();
-    else window.ComparePanel.relayoutView(days);
-  } else if (window.WeatherPlot) {
-    if (days === null) {
-      const p = document.getElementById('plot');
-      if (p && p.classList.contains('js-plotly-plot'))
-        Plotly.relayout('plot', { 'xaxis.range': [p.getAttribute('data-start-time'), p.getAttribute('data-end-time')] });
-    } else if (days === 1 && typeof window.WeatherPlot.viewOneDay === 'function') {
-      window.WeatherPlot.viewOneDay();
-    } else {
-      window.WeatherPlot.adjustViewRange(days);
-    }
-  }
+window.applyActiveView = function() {
+  const saved = window._savedXRange;
+  const cc = document.getElementById('compare-chart');
+  const pd = document.getElementById('plot');
+  const el = (cc && cc.classList.contains('js-plotly-plot')) ? cc
+           : (pd && pd.classList.contains('js-plotly-plot')) ? pd
+           : null;
+  if (!el) return;
+  const ds = el.getAttribute('data-start-time');
+  const de = el.getAttribute('data-end-time');
+  if (!ds || !de) return;
+
+  if (!saved) { Plotly.relayout(el.id, { 'xaxis.range': [ds, de] }); return; }
+
+  const domS = new Date(ds), domE = new Date(de);
+  let ns = new Date(saved.start), ne = new Date(saved.end);
+  const w = ne - ns, domW = domE - domS;
+  if (w <= 0 || w >= domW) { Plotly.relayout(el.id, { 'xaxis.range': [ds, de] }); return; }
+  if (ns < domS) { ns = domS; ne = new Date(ns.getTime() + w); }
+  if (ne > domE) { ne = domE; ns = new Date(ne.getTime() - w); }
+  if (ns < domS) ns = domS;
+  const fmt = d => d.toISOString().replace('Z', '');
+  Plotly.relayout(el.id, { 'xaxis.range': [fmt(ns), fmt(ne)] });
 };
 
 // Add View Range Button Event Handlers with URL updates
 document.getElementById("view1d").addEventListener("click", function() {
-  window._activeViewDays = 1;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.viewOneDay();
   } else if (window.WeatherPlot && typeof window.WeatherPlot.viewOneDay === 'function') {
@@ -870,7 +876,6 @@ document.getElementById("view1d").addEventListener("click", function() {
 });
 
 document.getElementById("view2d").addEventListener("click", function() {
-  window._activeViewDays = 2;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.relayoutView(2);
   } else {
@@ -882,7 +887,6 @@ document.getElementById("view2d").addEventListener("click", function() {
 });
 
 document.getElementById("view5d").addEventListener("click", function() {
-  window._activeViewDays = 5;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.relayoutView(5);
   } else {
@@ -893,7 +897,7 @@ document.getElementById("view5d").addEventListener("click", function() {
 });
 
 document.getElementById("viewAll").addEventListener("click", function() {
-  window._activeViewDays = null;
+  window._savedXRange = null;
   if (document.getElementById('panelSelect').value === 'compare' && window.ComparePanel) {
     window.ComparePanel.viewAll();
   } else {

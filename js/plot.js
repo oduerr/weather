@@ -510,9 +510,8 @@ window.WeatherPlot.adjustViewRange = function(days) {
   const viewStartISO = viewStart.toISOString().replace('Z', '');
   const viewEndISO = viewEnd.toISOString().replace('Z', '');
 
-  Plotly.relayout('plot', {
-    'xaxis.range': [viewStartISO, viewEndISO]
-  });
+  window._savedXRange = { start: viewStartISO, end: viewEndISO };
+  Plotly.relayout('plot', { 'xaxis.range': [viewStartISO, viewEndISO] });
 };
 
 /**
@@ -542,15 +541,15 @@ window.WeatherPlot.viewOneDay = function() {
     const firstDayStart = new Date(dataStart);
     firstDayStart.setHours(0,0,0,0);
     const firstDayEnd = new Date(firstDayStart.getTime() + 28 * 60 * 60 * 1000);
-    Plotly.relayout('plot', {
-      'xaxis.range': [firstDayStart.toISOString().replace('Z',''), firstDayEnd.toISOString().replace('Z','')]
-    });
+    const s = firstDayStart.toISOString().replace('Z',''), e = firstDayEnd.toISOString().replace('Z','');
+    window._savedXRange = { start: s, end: e };
+    Plotly.relayout('plot', { 'xaxis.range': [s, e] });
     return;
   }
 
-  Plotly.relayout('plot', {
-    'xaxis.range': [viewStart.toISOString().replace('Z',''), viewEnd.toISOString().replace('Z','')]
-  });
+  const s = viewStart.toISOString().replace('Z',''), e = viewEnd.toISOString().replace('Z','');
+  window._savedXRange = { start: s, end: e };
+  Plotly.relayout('plot', { 'xaxis.range': [s, e] });
 };
 
 /**

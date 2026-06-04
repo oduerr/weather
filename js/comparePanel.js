@@ -211,9 +211,9 @@ window.ComparePanel = {
     const dataEnd   = new Date(endTime);
     const viewStart = new Date(Math.max(dataStart, now - msPerDay * 0.5));
     const viewEnd   = new Date(Math.min(dataEnd, viewStart.getTime() + days * msPerDay));
-    Plotly.relayout('compare-chart', {
-      'xaxis.range': [viewStart.toISOString().replace('Z', ''), viewEnd.toISOString().replace('Z', '')]
-    });
+    const s = viewStart.toISOString().replace('Z', ''), e = viewEnd.toISOString().replace('Z', '');
+    window._savedXRange = { start: s, end: e };
+    Plotly.relayout('compare-chart', { 'xaxis.range': [s, e] });
     this._restyleSymbolSize(days);
   },
 
@@ -223,15 +223,17 @@ window.ComparePanel = {
     const s = chartDiv.getAttribute('data-start-time');
     const e = chartDiv.getAttribute('data-end-time');
     if (s && e) {
+      window._savedXRange = null;
       Plotly.relayout('compare-chart', { 'xaxis.range': [s, e] });
-      const days = (new Date(e) - new Date(s)) / 86400000;
-      this._restyleSymbolSize(days);
+      this._restyleSymbolSize((new Date(e) - new Date(s)) / 86400000);
     }
   },
 
   viewOneDay: function() { this.relayoutView(1); },
 
   animateRange: function(newStart, newEnd) {
+    const fmt = d => d.toISOString().replace('Z', '');
+    window._savedXRange = { start: fmt(newStart), end: fmt(newEnd) };
     const chartDiv = document.getElementById('compare-chart');
     if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
     

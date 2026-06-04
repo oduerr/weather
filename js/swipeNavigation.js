@@ -91,6 +91,7 @@ window.SwipeNavigation = {
     }
 
     const fmt = d => d.toISOString().replace('Z', '');
+    window._savedXRange = { start: fmt(ns), end: fmt(ne) };
 
     if (el.id === 'compare-chart' && window.ComparePanel && window.ComparePanel.animateRange) {
       window.ComparePanel.animateRange(ns, ne);

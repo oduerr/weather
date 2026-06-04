@@ -365,6 +365,60 @@ updateModelRowVisibility();
 // 3) Fetch & Plot Function
 // ------------------------------
 // Make fetchAndPlot globally accessible for location search integration
+function toggleHelpOverlay() {
+  const existing = document.getElementById('help-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'help-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:white;border-radius:14px;padding:24px 28px;max-width:480px;width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-height:90vh;overflow-y:auto;';
+
+  const sections = [
+    { title: '⏱ View Range', rows: [
+      ['1', '1 day'], ['2', '2 days'], ['5', '5 days'], ['a', 'All data'],
+    ]},
+    { title: '📊 Panels', rows: [
+      ['t', 'Temperature'], ['u', 'UV & Wind'], ['c', 'Compare'], ['o', 'Overview'], ['r', 'Open Radar'],
+    ]},
+    { title: '🧭 Navigation', rows: [
+      ['← →', 'Pan time axis'], ['↑ ↓', 'Cycle panels'],
+      ['Swipe ←→', 'Pan time (controls hidden)'], ['Swipe ↑↓', 'Switch panel (controls hidden)'],
+    ]},
+    { title: '🖥 Display', rows: [
+      ['Esc', 'Show / hide controls'], ['?', 'This help screen'],
+    ]},
+  ];
+
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    + '<h2 style="margin:0;font-size:17px;font-weight:700;">⌨️ Keyboard Shortcuts</h2>'
+    + '<span id="help-close" style="cursor:pointer;font-size:20px;line-height:1;color:#666;">✕</span>'
+    + '</div>';
+
+  sections.forEach(s => {
+    html += `<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:6px;">${s.title}</div>`;
+    html += '<table style="width:100%;border-collapse:collapse;">';
+    s.rows.forEach(([key, desc]) => {
+      html += `<tr>
+        <td style="padding:3px 0;width:110px;">
+          ${key.split(' ').map(k => `<kbd style="display:inline-block;padding:2px 7px;border:1px solid #ccc;border-radius:4px;font-size:12px;font-family:monospace;background:#f5f5f5;margin-right:2px;">${k}</kbd>`).join('')}
+        </td>
+        <td style="padding:3px 0;font-size:13px;color:#333;">${desc}</td>
+      </tr>`;
+    });
+    html += '</table></div>';
+  });
+
+  box.innerHTML = html;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  box.querySelector('#help-close').addEventListener('click', () => overlay.remove());
+}
+
 function showForecastError(message) {
   document.getElementById('forecast-error-banner')?.remove();
   const banner = document.createElement('div');
@@ -991,11 +1045,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. Escape key: Toggle controls visibility (acting as a shortcut for the eye button)
     if (event.key === 'Escape') {
       event.preventDefault();
-      if (isControlsVisible) {
-        hideControls();
-      } else {
-        showControls();
-      }
+      const help = document.getElementById('help-overlay');
+      if (help) { help.remove(); return; }
+      if (isControlsVisible) { hideControls(); } else { showControls(); }
     }
 
     // 2. ArrowUp / ArrowDown keys: Switch between metric panels
@@ -1037,6 +1089,12 @@ document.addEventListener('DOMContentLoaded', function() {
       event.preventDefault();
       const p = new URLSearchParams(window.location.search);
       window.open('./radar.html?lat=' + (p.get('lat') || '47.6952') + '&lon=' + (p.get('lon') || '9.1307'), '_blank');
+    }
+
+    // 6. ? — toggle keyboard help overlay
+    if (event.key === '?') {
+      event.preventDefault();
+      toggleHelpOverlay();
     }
   });
 });

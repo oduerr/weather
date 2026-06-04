@@ -241,7 +241,7 @@ window.OverviewPanel = {
    */
   renderOverviewLayout: function(plot, days, isEnsemble, modelLabel, location, forecast) {
     const container = document.createElement('div');
-    container.style.cssText = 'padding:16px;max-width:100vw;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;height:calc(100vh - 120px);overflow-y:auto;';
+    container.style.cssText = 'padding:16px;min-width:980px;width:100%;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
     // Sticky header
     const locationInfo = this.formatLocationInfo(location, forecast);
@@ -344,8 +344,6 @@ window.OverviewPanel = {
       'border-radius:12px',
       'padding:12px',
       'text-align:center',
-      'overflow:hidden',
-      'min-width:0',
       isWeekend ? 'background:rgba(238,240,255,0.9)' : 'background:rgba(255,255,255,0.9)',
       isToday
         ? 'box-shadow:0 0 0 2px #007AFF,0 2px 12px rgba(0,122,255,0.2)'

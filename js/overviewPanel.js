@@ -79,12 +79,15 @@ window.OverviewPanel = {
     const dayGroups = {};
     times.forEach((timeStr, index) => {
       const date = new Date(timeStr);
-      const dayKey = date.toISOString().split('T')[0];
-      
+      // Use the date portion of the local time string directly — Open-Meteo
+      // returns Berlin local time strings, so splitting on 'T' is correct.
+      // (toISOString() would give UTC and misplace midnight–01:59 Berlin.)
+      const dayKey = timeStr.split('T')[0];
+
       if (!dayGroups[dayKey]) {
         dayGroups[dayKey] = {
           date: dayKey,
-          dateObj: new Date(dayKey + 'T12:00:00'), // Use noon to avoid timezone issues
+          dateObj: new Date(dayKey + 'T12:00:00'),
           hours: [],
           temperatures: [],
           weatherCodes: [],
@@ -154,15 +157,9 @@ window.OverviewPanel = {
    * @returns {Array} Array with only today and future days
    */
   filterFutureDays: function(days) {
-    // Get today's date in YYYY-MM-DD format (local time)
-    const today = new Date();
-    const todayString = today.getFullYear() + '-' + 
-                       String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                       String(today.getDate()).padStart(2, '0');
-    
-    return days.filter(day => {
-      return day.date >= todayString;
-    });
+    const todayString = new Date()
+      .toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).split(' ')[0];
+    return days.filter(day => day.date >= todayString);
   },
 
   /**
@@ -301,10 +298,12 @@ window.OverviewPanel = {
 
       const weekRow = document.createElement('div');
       weekRow.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px;';
+      const weekContainsToday = week.some(s => s && s.date === todayStr);
+      if (weekContainsToday) weekRow.setAttribute('data-week-today', '');
 
       week.forEach(slot => {
         if (!slot) {
-          weekRow.appendChild(document.createElement('div')); // empty spacer
+          weekRow.appendChild(document.createElement('div'));
         } else {
           const dow = new Date(slot.date + 'T12:00').getDay();
           const card = this.createDayCard(slot, isEnsemble, {
@@ -319,6 +318,15 @@ window.OverviewPanel = {
     });
 
     plot.appendChild(container);
+
+    // Scroll so today's week row is near the top (below sticky headers ~80px)
+    requestAnimationFrame(() => {
+      const todayWeek = plot.querySelector('[data-week-today]');
+      if (!todayWeek) return;
+      const plotRect = plot.getBoundingClientRect();
+      const weekRect = todayWeek.getBoundingClientRect();
+      plot.scrollTop += weekRect.top - plotRect.top - 80;
+    });
   },
 
   /**

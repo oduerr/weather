@@ -254,7 +254,7 @@
     </div>
     
     <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px;">
-      <button onclick="window.open('./radar.html', '_blank')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #007AFF; background: #007AFF; color: white; font-size: 14px; min-height: 44px;">🌧️ Radar</button>
+      <button onclick="(() => { const p = new URLSearchParams(window.location.search); window.open('./radar.html?lat=' + (p.get('lat')||'47.6952') + '&lon=' + (p.get('lon')||'9.1307'), '_blank'); })()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #007AFF; background: #007AFF; color: white; font-size: 14px; min-height: 44px;">🌧️ Radar</button>
       <span id="konstanzTemperature"></span>
       
       <!-- Mobile-friendly View Range Buttons -->

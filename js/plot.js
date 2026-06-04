@@ -642,15 +642,15 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   const arrowIdx = timesLocal.map((_, i) => i).filter(i => i % 3 === 0);
   const traceWindDirArrows = {
     x: arrowIdx.map(i => timesLocal[i]),
-    y: arrowIdx.map(i => windSpeed[i]),
+    y: arrowIdx.map(() => 0.5),
     mode: 'text',
     text: arrowIdx.map(i => windDirToArrow(windDirection[i])),
-    textfont: { size: 48, color: 'rgba(0,100,0,0.85)' },
+    textfont: { size: 38, color: 'rgba(0,100,0,0.85)' },
     name: 'Wind Direction',
     hovertext: arrowIdx.map(i => `${windDirToArrow(windDirection[i])} ${Math.round(windDirection[i])}°`),
     hoverinfo: 'text',
     showlegend: false,
-    yaxis: 'y2'
+    yaxis: 'y3'
   };
 
   // Ensemble traces for UV and Wind
@@ -703,15 +703,15 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     // Observed wind direction arrows overlaid on observed wind speed
     brightSkyTraces.push({
       x: brightSkyData.times,
-      y: brightSkyData.windSpeed,
+      y: brightSkyData.times.map(() => 0.5),
       mode: 'text',
       text: brightSkyData.windDirection.map(windDirToArrow),
-      textfont: { size: 48, color: 'rgba(0,100,0,0.4)' },
+      textfont: { size: 38, color: 'rgba(0,100,0,0.4)' },
       name: 'Observed Wind Direction',
       hovertext: brightSkyData.windDirection.map(d => `Obs: ${windDirToArrow(d)} ${Math.round(d)}°`),
       hoverinfo: 'text',
       showlegend: false,
-      yaxis: 'y2'
+      yaxis: 'y3'
     });
     
     console.log("✅ Added BrightSky wind observation data for UV/Wind panel");
@@ -900,19 +900,13 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
       showgrid: true, 
       tickangle: -30, 
       rangeslider: { visible: false },
-      anchor: "y2",
+      anchor: "y3",
       range: [startTime, endTime]
     },
 
-    yaxis1: { title: "UV Index", domain: [0.65, 1], anchor: "x", color: "purple", range: [0, 12] },
-    yaxis2: {
-      title: "Wind Speed (km/h)",
-      domain: [0, 0.65],
-      anchor: "x",
-      color: "blue",
-      autorange: true,
-      rangemode: 'tozero'
-    },
+    yaxis1: { title: "UV Index", domain: [0.62, 1], anchor: "x", color: "purple", range: [0, 12] },
+    yaxis2: { title: "Wind Speed (km/h)", domain: [0.18, 0.62], anchor: "x", color: "blue", autorange: true, rangemode: 'tozero' },
+    yaxis3: { domain: [0, 0.14], anchor: "x", visible: false, range: [0, 1] },
 
     shapes: [...nightShading, ...beaufortShapes, shapeNow, ...lastObsShapesUV],
     showlegend: false, // remove legend for now

@@ -288,6 +288,11 @@ window.SwipeNavigation = {
       return;
     }
     
+    if (activeEl.id === 'compare-chart' && window.ComparePanel && typeof window.ComparePanel.animateRange === 'function') {
+      window.ComparePanel.animateRange(newRange.start, newRange.end);
+      return;
+    }
+    
     const formatTime = (date) => date.toISOString().replace('Z', '');
     
     Plotly.animate(activeEl.id, {

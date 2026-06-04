@@ -248,6 +248,47 @@ window.ComparePanel = {
 
   viewOneDay: function() { this.relayoutView(1); },
 
+  animateRange: function(newStart, newEnd) {
+    const chartDiv = document.getElementById('compare-chart');
+    if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
+    
+    const layout = chartDiv.layout || chartDiv._fullLayout || {};
+    const xaxis = layout.xaxis;
+    if (!xaxis || !Array.isArray(xaxis.range)) return;
+    
+    const startFrom = new Date(xaxis.range[0]).getTime();
+    const endFrom = new Date(xaxis.range[1]).getTime();
+    const startTo = newStart.getTime();
+    const endTo = newEnd.getTime();
+    const duration = 600; // Matches duration of temperature panel transition (600ms)
+    const startTime = performance.now();
+    const formatTime = (date) => date.toISOString().replace('Z', '');
+    
+    if (chartDiv._currentPanAnimId) {
+      cancelAnimationFrame(chartDiv._currentPanAnimId);
+    }
+    
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Easing: easeOutCubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const curStart = startFrom + (startTo - startFrom) * ease;
+      const curEnd = endFrom + (endTo - endFrom) * ease;
+      
+      Plotly.relayout('compare-chart', {
+        'xaxis.range': [formatTime(new Date(curStart)), formatTime(new Date(curEnd))]
+      });
+      
+      if (progress < 1) {
+        chartDiv._currentPanAnimId = requestAnimationFrame(step);
+      } else {
+        delete chartDiv._currentPanAnimId;
+      }
+    };
+    chartDiv._currentPanAnimId = requestAnimationFrame(step);
+  },
+
   navigateTime: function(direction) {
     const chartDiv = document.getElementById('compare-chart');
     if (!chartDiv || !chartDiv.classList.contains('js-plotly-plot')) return;
@@ -272,9 +313,7 @@ window.ComparePanel = {
       newEnd   = new Date(de);
       newStart = new Date(newStart.getTime() - off);
     }
-    Plotly.relayout('compare-chart', {
-      'xaxis.range': [newStart.toISOString().replace('Z', ''), newEnd.toISOString().replace('Z', '')]
-    });
+    this.animateRange(newStart, newEnd);
   },
 
   _buildColorMap: function(ids) {

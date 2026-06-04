@@ -840,6 +840,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // Set up ResizeObserver to dynamically adjust margins whenever controls size changes
+  const resizeObserver = new ResizeObserver(() => {
+    adjustPlotMargin();
+  });
+  if (controls) {
+    resizeObserver.observe(controls);
+  }
+
   // Handle mobile orientation changes
   window.addEventListener('orientationchange', function() {
     setTimeout(() => {

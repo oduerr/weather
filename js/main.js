@@ -11,7 +11,7 @@ let measured_water_temp = null;
 // import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
 
 // For now, we'll define the configuration inline to maintain file:// compatibility
-const PANELS = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals', 'compare'];
+const PANELS = ['temperature', 'overview', 'uv_wind', 'actuals', 'compare'];
 const PANEL_CONFIG = {
   temperature: {
     enabled: true,
@@ -27,14 +27,6 @@ const PANEL_CONFIG = {
     description: 'Daily overview with morning/midday/evening slices',
     defaultView: '5d',
     showEnsemble: true,
-    showCurrent: false
-  },
-  overviewTable: {
-    enabled: true,
-    title: 'Overview Table',
-    description: 'Table view with dates and time periods',
-    defaultView: 'all',
-    showEnsemble: false,
     showCurrent: false
   },
   uv_wind: {
@@ -344,7 +336,7 @@ if (urlParams.model && models.find(m => m.id === urlParams.model)) {
 // Set panel from URL or default
 const panelSelect = document.getElementById('panelSelect');
 if (urlParams.panel && panelSelect) {
-  const validPanels = ['temperature', 'overview', 'overviewTable', 'uv_wind', 'actuals', 'compare'];
+  const validPanels = ['temperature', 'overview', 'uv_wind', 'actuals', 'compare'];
   if (validPanels.includes(urlParams.panel)) {
     panelSelect.value = urlParams.panel;
   }

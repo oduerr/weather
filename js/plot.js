@@ -490,7 +490,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     annotations: [...weekdayAnnotations, ...lastObsAnnotations]  // ✅ Add weekday labels at noon + last obs
   }; // End of layout
 
-  Plotly.newPlot('plot', allTraces, layout).then(() => {
+  Plotly.newPlot('plot', allTraces, layout, { displayModeBar: false }).then(() => {
     const plotDiv = document.getElementById('plot');
     const startTime = plotDiv.getAttribute('data-start-time');
     const endTime = plotDiv.getAttribute('data-end-time');
@@ -935,7 +935,7 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     annotations: [...weekdayAnnotations, ...beaufortAnnotations, ...lastObsAnnotationsUV]
   };
 
-  Plotly.newPlot('plot', allTraces, layout).then(() => {
+  Plotly.newPlot('plot', allTraces, layout, { displayModeBar: false }).then(() => {
     const plotDiv = document.getElementById('plot');
     const startTime = plotDiv.getAttribute('data-start-time');
     const endTime = plotDiv.getAttribute('data-end-time');

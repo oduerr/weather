@@ -97,8 +97,7 @@ window.ComparePanel = {
 
     Plotly.newPlot('compare-chart', traces, layout, {
       responsive: true,
-      displaylogo: false,
-      modeBarButtonsToRemove: ['lasso2d', 'select2d']
+      displayModeBar: false
     }).then(() => {
       if (window.ViewportPreserver && typeof window.ViewportPreserver.hasPending === 'function' && window.ViewportPreserver.hasPending()) {
         window.ViewportPreserver.applyIfPending();

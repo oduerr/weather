@@ -197,6 +197,27 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
     #fade-button:active { transform: scale(0.98); }
+
+    #help-button {
+      position: fixed;
+      top: 10px;
+      right: 60px;
+      z-index: 200;
+      width: 44px;
+      height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 22px;
+      border: 1px solid #007AFF;
+      background: #007AFF;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    #help-button:active { transform: scale(0.98); }
   </style>
 </head>
 
@@ -274,6 +295,7 @@
 
   <!-- 🔹 Manual fade toggle button (always visible) -->
   <button id="fade-button" aria-label="Hide Controls" title="Hide Controls">👁️</button>
+  <button id="help-button" onclick="toggleHelpOverlay()" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
 
   <!-- Fade trigger area -->
   <div id="fade-trigger"></div>

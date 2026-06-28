@@ -361,6 +361,10 @@ function updateModelRowVisibility() {
   if (row) row.style.display = panel === 'compare' ? 'none' : 'flex';
   const dewCtrl = document.getElementById('dew-point-control');
   if (dewCtrl) dewCtrl.style.display = panel === 'temperature' ? 'flex' : 'none';
+  // Range picker (1d/2d/5d/All + ◀▶) only applies to the time-axis chart panels.
+  const viewCtrl = document.getElementById('view-controls');
+  const rangePanels = ['temperature', 'uv_wind', 'compare'];
+  if (viewCtrl) viewCtrl.style.display = rangePanels.includes(panel) ? 'flex' : 'none';
 }
 updateModelRowVisibility();
 

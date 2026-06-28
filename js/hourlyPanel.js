@@ -95,13 +95,13 @@ window.HourlyPanel = (function () {
     const isDay = h.isDay !== 0; // treat unknown as day
     const tile = document.createElement('div');
     const bg = h.isNow
-      ? (isDay ? '#eaf3ff' : '#33406b')
-      : (isDay ? '#f7f8fb' : '#2b3050');
+      ? (isDay ? '#eaf3ff' : '#4a5690')
+      : (isDay ? '#f7f8fb' : '#3b4470');
     tile.style.cssText = [
       'flex:0 0 auto', 'scroll-snap-align:start', 'width:64px',
       'box-sizing:border-box', 'padding:8px 4px', 'border-radius:12px',
       'text-align:center', 'background:' + bg, 'cursor:pointer',
-      'border:' + (h.isNow ? '1.5px solid #007AFF' : '1px solid ' + (isDay ? '#ececf0' : '#3a4166')),
+      'border:' + (h.isNow ? '1.5px solid #007AFF' : '1px solid ' + (isDay ? '#ececf0' : '#4d5689')),
       'display:flex', 'flex-direction:column', 'align-items:center', 'gap:2px'
     ].join(';');
 
@@ -165,28 +165,22 @@ window.HourlyPanel = (function () {
     const tile = document.createElement('div');
     const sunrise = m.marker === 'sunrise';
     tile.style.cssText = [
-      'flex:0 0 auto', 'scroll-snap-align:start', 'width:54px',
-      'box-sizing:border-box', 'padding:8px 4px', 'border-radius:12px',
+      'flex:0 0 auto', 'scroll-snap-align:start', 'width:30px',
+      'box-sizing:border-box', 'padding:6px 2px', 'border-radius:10px',
       'text-align:center', 'display:flex', 'flex-direction:column',
-      'align-items:center', 'justify-content:center', 'gap:4px',
-      'background:' + (sunrise
-        ? 'linear-gradient(180deg,#fff4d6,#ffe9c2)'
-        : 'linear-gradient(180deg,#ffe0c2,#e9c7e8)'),
-      'border:1px dashed ' + (sunrise ? '#e0b341' : '#c98fb0')
+      'align-items:center', 'justify-content:center', 'gap:2px',
+      'background:' + (sunrise ? '#fff4d6' : '#f3dcee')
     ].join(';');
+    tile.title = (sunrise ? 'Sunrise ' : 'Sunset ') + m.time;
 
     const emo = document.createElement('div');
     emo.textContent = sunrise ? '🌅' : '🌇';
-    emo.style.cssText = 'font-size:24px;line-height:1';
-    const lbl = document.createElement('div');
-    lbl.textContent = sunrise ? 'Sunrise' : 'Sunset';
-    lbl.style.cssText = 'font-size:9px;color:#7a5a2a;font-weight:600;text-transform:uppercase;letter-spacing:.3px';
+    emo.style.cssText = 'font-size:15px;line-height:1';
     const time = document.createElement('div');
     time.textContent = m.time;
-    time.style.cssText = 'font-size:12px;font-weight:700;color:#5a3f1e';
+    time.style.cssText = 'font-size:9px;font-weight:700;color:#5a3f1e';
 
     tile.appendChild(emo);
-    tile.appendChild(lbl);
     tile.appendChild(time);
     return tile;
   }

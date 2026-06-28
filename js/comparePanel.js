@@ -97,7 +97,10 @@ window.ComparePanel = {
 
     Plotly.newPlot('compare-chart', traces, layout, {
       responsive: true,
-      displayModeBar: false
+      displayModeBar: false,
+      // Custom view buttons own the x-range; stop tap/double-tap from resetting it.
+      doubleClick: false,
+      scrollZoom: false
     }).then(() => {
       if (typeof window.applyActiveView === 'function') window.applyActiveView();
     });

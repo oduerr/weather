@@ -11,8 +11,16 @@ let measured_water_temp = null;
 // import { PANELS, PANEL_CONFIG, WEATHER_MODELS, LOCATIONS, DEFAULT_SETTINGS } from './config/appConfig.js';
 
 // For now, we'll define the configuration inline to maintain file:// compatibility
-const PANELS = ['temperature', 'overview', 'uv_wind', 'actuals', 'compare'];
+const PANELS = ['temperature', 'overview', 'uv_wind', 'actuals', 'compare', 'hourly'];
 const PANEL_CONFIG = {
+  hourly: {
+    enabled: true,
+    title: 'Hourly',
+    description: 'Swipeable hour tiles: symbol, temp, UV, wind, precipitation',
+    defaultView: '2d',
+    showEnsemble: false,
+    showCurrent: false
+  },
   temperature: {
     enabled: true,
     title: 'Temperature',
@@ -336,12 +344,15 @@ if (urlParams.model && models.find(m => m.id === urlParams.model)) {
 // Set panel from URL or default
 const panelSelect = document.getElementById('panelSelect');
 if (urlParams.panel && panelSelect) {
-  const validPanels = ['temperature', 'overview', 'uv_wind', 'actuals', 'compare'];
+  const validPanels = ['temperature', 'overview', 'uv_wind', 'actuals', 'compare', 'hourly'];
   if (validPanels.includes(urlParams.panel)) {
     panelSelect.value = urlParams.panel;
   }
 } else if (panelSelect) {
-  panelSelect.value = 'compare';
+  // Default panel: Overview on mobile (touch-friendly, links into Hourly),
+  // Compare on larger screens. Breakpoint matches the CSS mobile media query.
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  panelSelect.value = isMobile ? 'overview' : 'compare';
 }
 
 function updateModelRowVisibility() {
@@ -377,7 +388,7 @@ function toggleHelpOverlay() {
     ]},
     { title: '🧭 Navigation', rows: [
       ['← →', 'Pan time axis'], ['↑ ↓', 'Cycle panels'],
-      ['Swipe ←→', 'Pan time (controls hidden)'], ['Swipe ↑↓', 'Switch panel (controls hidden)'],
+      ['Swipe ←→', 'Pan time axis'],
     ]},
     { title: '🖥 Display', rows: [
       ['Esc', 'Show / hide controls'], ['?', 'This help screen'],
@@ -952,10 +963,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isControlsVisible) {
       const h = controls.offsetHeight;
       plot.style.marginTop = h + 'px';
-      plot.style.height = `calc(100vh - ${h}px)`;
+      plot.style.height = `calc(100dvh - ${h}px)`;
     } else {
       plot.style.marginTop = '0px';
-      plot.style.height = '100vh';
+      plot.style.height = '100dvh';
     }
   }
 

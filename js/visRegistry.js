@@ -216,7 +216,13 @@ window.VisRegistry = {
     const headRow = document.createElement('tr');
     headRow.appendChild(th('Metric'));
     headRow.appendChild(th('Observed (Station)'));
-    headRow.appendChild(th('Observed (BrightSky)'));
+    // BrightSky column: note which DWD station the data comes from, if known.
+    let brightSkyHeader = 'Observed (BrightSky)';
+    if (brightSky && brightSky.station && brightSky.station.dwdId) {
+      const st = brightSky.station;
+      brightSkyHeader = `Observed (BrightSky)<br><span style="font-size:11px;font-weight:normal;color:#666;">DWD ${st.dwdId}${st.name ? ' · ' + st.name : ''}${st.wmoId ? ' (WMO ' + st.wmoId + ')' : ''}</span>`;
+    }
+    headRow.appendChild(th(brightSkyHeader));
     
     let forecastHeader = `Forecast (${model && model.label ? model.label : 'Model'})`;
     if (data && data.forecast && data.forecast.model_metadata && data.forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
@@ -245,6 +251,12 @@ window.VisRegistry = {
     addRow('UV index', 'N/A', null, 'N/A', null, fmt(fcUV.value, ''), fcUV.time);
     addRow('Precipitation (mm / %)', 'N/A', null, fmt(bsPrec.value, 'mm'), bsPrec.time, fcPrecProb.value != null ? fmt(fcPrecProb.value, '%', 0) : 'N/A', fcPrecProb.time);
     addRow('Cloud cover (%)', 'N/A', null, 'N/A', null, fmt(fcCloud.value, '%', 0), fcCloud.time);
+
+    // Lake level (Bodensee at Konstanz) from PegelOnline (WSV) — observed only.
+    const pegel = observations.pegel || null;
+    if (pegel && pegel.value != null) {
+      addRow('Lake level — Konstanz (cm, PegelOnline)', fmt(pegel.value, 'cm', 0), pegel.time, 'N/A', null, 'N/A', null);
+    }
 
     table.appendChild(thead);
     table.appendChild(tbody);

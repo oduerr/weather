@@ -352,9 +352,34 @@ window.WeatherAPI.processBrightSkyHistoricalData = function(brightSkyData, curre
     }
   });
 
+  // Capture the underlying DWD station identity (for display in the Actuals panel).
+  try {
+    const srcs = Array.isArray(brightSkyData.sources) ? brightSkyData.sources : [];
+    const s = srcs.find(x => x.dwd_station_id) || srcs[0];
+    if (s) processedData.station = { dwdId: s.dwd_station_id || null, name: s.station_name || null, wmoId: s.wmo_station_id || null };
+  } catch (_) {}
+
   console.log("✅ Processed BrightSky historical data:", processedData.times.length, "actual observations");
   return processedData;
 }
+
+/**
+ * Fetch current Lake Constance water level at Konstanz from PegelOnline (WSV).
+ * CORS-enabled (Access-Control-Allow-Origin: *). Source must be credited.
+ * @returns {Promise<Object|null>} { value (cm), time (ISO), state } or null
+ */
+window.WeatherAPI.fetchPegelKonstanz = async function() {
+  const url = 'https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/KONSTANZ/W/currentmeasurement.json';
+  try {
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    return { value: d.value, time: d.timestamp, state: d.stateMnwMhw || null };
+  } catch (e) {
+    console.warn('Could not fetch PegelOnline lake level:', e);
+    return null;
+  }
+};
 
 /**
  * Get BrightSky observation data for Konstanz
@@ -593,11 +618,12 @@ window.WeatherAPI.getObservationData = async function(location) {
     const currentDate = nowBerlin.split('T')[0];
     
     try {
-      const [stationData, brightSkyData] = await Promise.all([
+      const [stationData, brightSkyData, pegelData] = await Promise.all([
         window.WeatherAPI.getKonstanzWeatherStationData(currentDate),
-        window.WeatherAPI.getBrightSkyObservationData(currentDate)
+        window.WeatherAPI.getBrightSkyObservationData(currentDate),
+        window.WeatherAPI.fetchPegelKonstanz()
       ]);
-      
+
       // Compute last observation time from BrightSky (if available)
       let lastObsTime = null;
       if (brightSkyData && Array.isArray(brightSkyData.times) && brightSkyData.times.length > 0) {
@@ -605,10 +631,11 @@ window.WeatherAPI.getObservationData = async function(location) {
         // Attach to brightSky object for convenience
         brightSkyData.lastObsTime = lastObsTime;
       }
-      
+
       return {
         weatherStation: stationData,
         brightSky: brightSkyData,
+        pegel: pegelData,
         lastObsTime: lastObsTime
       };
     } catch (error) {

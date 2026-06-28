@@ -49,16 +49,17 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 - `js/hourlyPanel.js` → Hourly tiles panel
   - No Plotly (like `actuals`); pure DOM under `#plot`.
-  - Vertical day groups, each a horizontal `scroll-snap` row of hour tiles.
-  - Per tile: weather symbol, temp, UV, wind (speed + direction arrow), precip prob + amount.
-  - Starts at the current Berlin hour; first tile marked "Now". Reuses `WeatherIcons` + plot.js wind-arrow convention.
+  - Vertical day groups, each a horizontal `scroll-snap` row of tiles.
+  - Tiles default to every `STEP_H` (3) hours; tapping a tile toggles `expanded` (a module Set keyed by `date-blockIndex`) and re-renders in place, drilling that block into its individual hours. `lastRender` holds the last args for the in-place re-render; scroll positions are preserved.
+  - Per tile: weather symbol, temp (blue→red colour scale), UV, wind (speed + direction arrow), precip prob + amount bar. Day/night tint via hourly `is_day` (fallback: sunrise/sunset). Sunrise/sunset marker tiles inserted by time.
+  - Starts at the current Berlin hour; first tile marked "Now". Reuses `WeatherIcons` + plot.js wind-arrow convention. `is_day` is requested in `api.js` hourly vars.
 
 - `js/overviewPanel.js` → Calendar overview panel
   - Async render; fetches BrightSky past days for current week in parallel.
   - 7-column Mon–Sun grid; `min-width: 980px` container + `#plot overflow-x: auto`.
 
 - `js/swipeNavigation.js` → Swipe/keyboard panning
-  - Horizontal swipe left → later time (map-drag convention); up/down cycles panels.
+  - Horizontal swipe left → later time (map-drag convention). Vertical swipe is intentionally ignored (it collided with scrolling); panel switching is via the dropdown or ↑/↓ keys (in main.js).
   - Arrow left/right keys pan; always active (no controls-hidden gate).
   - Every range change saves to `window._savedXRange`; `window.applyActiveView()` restores after render.
 

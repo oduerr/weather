@@ -11,7 +11,7 @@ A mobile-friendly weather forecast app with multiple models, interactive charts,
 | Panel | Description |
 |---|---|
 | 🔀 **Compare** *(default)* | Overlay multiple forecast models side by side with temperature, rain, wind, UV, symbols |
-| 🕒 **Hourly** | Mobile-friendly swipeable hour tiles — weather symbol, temperature, UV, wind (speed + direction), precipitation probability & amount; grouped by day, "Now" highlighted |
+| 🕒 **Hourly** | Mobile-friendly swipeable tiles (every 3h by default — tap a tile to expand into hourly detail): weather symbol, temperature (colour-scaled), UV, wind (speed + direction), precipitation probability & amount. Day/night tinting, sunrise/sunset markers, "Now" highlighted |
 | 🌡️ **Temperature** | Hourly temperature, precipitation, cloud cover, humidity, visibility with observed overlays |
 | ☀️ **UV & Wind** | UV index and wind speed/gusts with Beaufort scale; wind direction shown as arrows on the wind trace |
 | 📅 **Overview** | Calendar grid (Mon–Sun weeks); today highlighted; weekends tinted; past days filled with BrightSky observed data |

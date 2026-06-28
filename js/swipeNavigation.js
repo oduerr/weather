@@ -47,10 +47,10 @@ window.SwipeNavigation = {
       if (adx >= this.minSwipeDistance && adx > ady * 1.5) {
         // Horizontal — pan time axis (map-drag convention: swipe left = later time)
         this.panTime(dx > 0 ? 'left' : 'right');
-      } else if (ady >= this.minSwipeDistance && ady > adx * 1.5) {
-        // Vertical — switch panel
-        this.switchPanel(dy > 0 ? 'down' : 'up');
       }
+      // Vertical swipe intentionally does nothing: it collided with normal
+      // page/panel scrolling and switched panels by accident. Use the panel
+      // dropdown or the ↑/↓ keys (handled in main.js) to change panels.
     }
     this.reset();
   },
@@ -100,16 +100,6 @@ window.SwipeNavigation = {
       transition: { duration: 600, easing: 'ease-out' },
       frame:      { duration: 600, redraw: false }
     });
-  },
-
-  switchPanel: function(direction) {
-    const sel = document.getElementById('panelSelect');
-    if (!sel) return;
-    const n = sel.options.length;
-    sel.selectedIndex = direction === 'up'
-      ? (sel.selectedIndex - 1 + n) % n
-      : (sel.selectedIndex + 1) % n;
-    sel.dispatchEvent(new Event('change'));
   },
 
   reset: function() {

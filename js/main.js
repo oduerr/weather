@@ -388,7 +388,7 @@ function toggleHelpOverlay() {
     ]},
     { title: '🧭 Navigation', rows: [
       ['← →', 'Pan time axis'], ['↑ ↓', 'Cycle panels'],
-      ['Swipe ←→', 'Pan time (controls hidden)'], ['Swipe ↑↓', 'Switch panel (controls hidden)'],
+      ['Swipe ←→', 'Pan time axis'],
     ]},
     { title: '🖥 Display', rows: [
       ['Esc', 'Show / hide controls'], ['?', 'This help screen'],

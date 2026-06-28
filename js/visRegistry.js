@@ -152,6 +152,18 @@ window.VisRegistry = {
       return unit ? `${v} ${unit}` : `${v}`;
     }
 
+    // Wind speed km/h → Beaufort, formatted with the km/h value as context.
+    function fmtBft(kmh) {
+      if (kmh === null || kmh === undefined || Number.isNaN(kmh)) return 'N/A';
+      let bft;
+      if (kmh < 1) bft = 0; else if (kmh <= 5) bft = 1; else if (kmh <= 11) bft = 2;
+      else if (kmh <= 19) bft = 3; else if (kmh <= 28) bft = 4; else if (kmh <= 38) bft = 5;
+      else if (kmh <= 49) bft = 6; else if (kmh <= 61) bft = 7; else if (kmh <= 74) bft = 8;
+      else if (kmh <= 88) bft = 9; else if (kmh <= 102) bft = 10; else if (kmh <= 117) bft = 11;
+      else bft = 12;
+      return `${bft} Bft (${Math.round(kmh)} km/h)`;
+    }
+
     // Compute Station values (Konstanz only)
     const stTimes = station && station.times ? station.times : null;
     const stTemp = station ? findLatestWithin(stTimes, station.temperature) : { value: null, time: null };
@@ -245,8 +257,8 @@ window.VisRegistry = {
 
     addRow('Air temperature (°C)', fmt(stTemp.value, '°C'), stTemp.time, fmt(bsTemp.value, '°C'), bsTemp.time, fmt(fcTemp.value, '°C'), fcTemp.time);
     addRow('Water temperature (°C)', fmt(stWater.value, '°C'), stWater.time, 'N/A', null, 'N/A', null);
-    addRow('Wind speed (km/h)', 'N/A', null, fmt(bsWind.value, 'km/h'), bsWind.time, fmt(fcWind.value, 'km/h'), fcWind.time);
-    addRow('Wind gust (km/h)', 'N/A', null, fmt(bsGust.value, 'km/h'), bsGust.time, fmt(fcGust.value, 'km/h'), fcGust.time);
+    addRow('Wind speed (Bft)', 'N/A', null, fmtBft(bsWind.value), bsWind.time, fmtBft(fcWind.value), fcWind.time);
+    addRow('Wind gust (Bft)', 'N/A', null, fmtBft(bsGust.value), bsGust.time, fmtBft(fcGust.value), fcGust.time);
     addRow('Wind direction (°)', 'N/A', null, fmt(bsDir.value, '°', 0), bsDir.time, fmt(fcDir.value, '°', 0), fcDir.time);
     addRow('UV index', 'N/A', null, 'N/A', null, fmt(fcUV.value, ''), fcUV.time);
     addRow('Precipitation (mm / %)', 'N/A', null, fmt(bsPrec.value, 'mm'), bsPrec.time, fcPrecProb.value != null ? fmt(fcPrecProb.value, '%', 0) : 'N/A', fcPrecProb.time);

@@ -67,6 +67,26 @@ window.HourlyPanel = (function () {
     return `hsl(${Math.round(hue)}, 80%, ${light}%)`;
   }
 
+  // Wind speed km/h → Beaufort (0–12).
+  function kmhToBeaufort(kmh) {
+    if (kmh == null || Number.isNaN(kmh)) return null;
+    if (kmh < 1) return 0; if (kmh <= 5) return 1; if (kmh <= 11) return 2;
+    if (kmh <= 19) return 3; if (kmh <= 28) return 4; if (kmh <= 38) return 5;
+    if (kmh <= 49) return 6; if (kmh <= 61) return 7; if (kmh <= 74) return 8;
+    if (kmh <= 88) return 9; if (kmh <= 102) return 10; if (kmh <= 117) return 11;
+    return 12;
+  }
+
+  // UV index → colour on the official WHO scale (green→yellow→orange→red→violet).
+  function uvColor(uv) {
+    if (uv == null) return '#888';
+    if (uv < 3) return '#3ea72d';    // low
+    if (uv < 6) return '#c79100';    // moderate (darkened yellow for readability)
+    if (uv < 8) return '#f06000';    // high
+    if (uv < 11) return '#d8001d';   // very high
+    return '#7b2fbe';                // extreme
+  }
+
   function dayLabel(dateStr, todayStr, tomorrowStr) {
     const d = new Date(dateStr + 'T12:00');
     const weekday = d.toLocaleDateString('en-GB', { weekday: 'short' });
@@ -122,17 +142,19 @@ window.HourlyPanel = (function () {
 
     const uv = document.createElement('div');
     if (h.uv != null && h.uv >= 0.5) {
-      uv.textContent = `☀️${h.uv}`;
-      uv.style.cssText = `font-size:11px;color:${isDay ? '#c47f00' : '#ffce6b'}`;
+      uv.textContent = `UV ${h.uv}`;
+      uv.style.cssText = `font-size:11px;font-weight:700;color:${uvColor(h.uv)}`;
     } else {
       uv.innerHTML = '&nbsp;';
       uv.style.cssText = 'font-size:11px';
     }
 
     const wind = document.createElement('div');
-    wind.textContent = h.wind != null ? `${h.wind}${h.arrow}` : '';
+    const bft = kmhToBeaufort(h.wind);
+    const gustBft = kmhToBeaufort(h.gust);
+    wind.textContent = bft != null ? `${bft}${gustBft != null && gustBft > bft ? '-' + gustBft : ''} Bft ${h.arrow}` : '';
     wind.style.cssText = `font-size:11px;color:${subColor};white-space:nowrap`;
-    wind.title = 'Wind km/h (gust ' + (h.gust != null ? h.gust : '?') + ')';
+    wind.title = `Wind ${bft} Bft (gust ${gustBft} Bft) — ${h.wind ?? '?'}/${h.gust ?? '?'} km/h`;
 
     const precip = document.createElement('div');
     precip.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:1px;min-height:42px;justify-content:flex-end;';
@@ -177,8 +199,8 @@ window.HourlyPanel = (function () {
     emo.textContent = sunrise ? '🌅' : '🌇';
     emo.style.cssText = 'font-size:15px;line-height:1';
     const time = document.createElement('div');
-    time.textContent = m.time;
-    time.style.cssText = 'font-size:9px;font-weight:700;color:#5a3f1e';
+    time.textContent = (sunrise ? '↑' : '↓') + m.time;
+    time.style.cssText = 'font-size:9px;font-weight:700;color:#5a3f1e;white-space:nowrap';
 
     tile.appendChild(emo);
     tile.appendChild(time);

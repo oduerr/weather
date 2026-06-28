@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>⛅ Forecast</title>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -25,6 +25,10 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       padding: 10px;
+      /* Keep controls clear of the notch / Dynamic Island */
+      padding-top: calc(10px + env(safe-area-inset-top));
+      padding-left: calc(10px + env(safe-area-inset-left));
+      padding-right: calc(10px + env(safe-area-inset-right));
       border-radius: 0 0 15px 15px;
       box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
       z-index: 100;
@@ -68,7 +72,7 @@
     /* 🔹 Mobile Plot Container */
     #plot {
       width: 100vw;
-      height: 100vh; /* Full height when controls fade */
+      height: 100dvh; /* Dynamic viewport height — avoids URL-bar jump on mobile */
       margin-top: 0; /* No margin when controls fade */
       transition: margin-top 0.3s ease;
       position: relative;
@@ -134,22 +138,34 @@
 
     /* Mobile-specific styles */
     @media (max-width: 768px) {
+      /* Tighten the bar so the chart gets more height; the 👁️ button still hides it entirely */
       #controls {
-        padding: 8px;
-        gap: 6px;
+        padding: 6px;
+        padding-top: calc(6px + env(safe-area-inset-top));
+        gap: 5px;
       }
-      
+
       select,
       #status {
         font-size: 13px;
         padding: 6px 10px;
+        min-height: 40px;
       }
-      
+
+      /* Compact view buttons so 1d/2d/5d/All/◀/▶ fit on a single row */
       .view-btn {
-        padding: 8px 12px;
+        padding: 6px 8px;
         font-size: 13px;
+        min-height: 40px;
+        min-width: 38px;
+        margin: 0 2px;
       }
-      
+
+      /* Less gap between row 1 and the model row */
+      #model-row {
+        margin-top: 5px !important;
+      }
+
       /* Hide Plotly toolbar controls on mobile */
       .plotly .modebar {
         display: none !important;
@@ -187,8 +203,8 @@
     /* 🔹 Always-visible Fade Toggle Button (top-right) */
     #fade-button {
       position: fixed;
-      top: 10px;
-      right: 10px;
+      top: calc(10px + env(safe-area-inset-top));
+      right: calc(10px + env(safe-area-inset-right));
       z-index: 200; /* Above controls (100) and fade-trigger (99) */
       width: 44px;
       height: 44px;
@@ -207,8 +223,8 @@
 
     #help-button {
       position: fixed;
-      top: 10px;
-      right: 60px;
+      top: calc(10px + env(safe-area-inset-top));
+      right: calc(60px + env(safe-area-inset-right));
       z-index: 200;
       width: 22px;
       height: 22px;
@@ -280,6 +296,7 @@
         <label for="panelSelect">📊</label>
         <select id="panelSelect">
           <option value="overview">📅 Overview</option>
+          <option value="hourly">🕒 Hourly</option>
           <option value="temperature">🌡️ Temperature</option>
           <option value="uv_wind">☀️ UV & Wind</option>
           <option value="actuals">📍 Actuals</option>
@@ -314,6 +331,7 @@
   <script src="./js/plot.js"></script>
   <script src="./js/visRegistry.js"></script>
   <script src="./js/overviewPanel.js"></script>
+  <script src="./js/hourlyPanel.js"></script>
   <script src="./js/comparePanel.js"></script>
   <script src="./js/locationPicker.js"></script>
   <script src="./js/locationSearch.js"></script>

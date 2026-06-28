@@ -47,6 +47,12 @@ This file captures project knowledge and guardrails so agents can make safe, hig
   - Fetches multiple models in parallel; state persists across re-renders.
   - Symbol size restyles dynamically via `Plotly.restyle` when view range changes.
 
+- `js/hourlyPanel.js` → Hourly tiles panel
+  - No Plotly (like `actuals`); pure DOM under `#plot`.
+  - Vertical day groups, each a horizontal `scroll-snap` row of hour tiles.
+  - Per tile: weather symbol, temp, UV, wind (speed + direction arrow), precip prob + amount.
+  - Starts at the current Berlin hour; first tile marked "Now". Reuses `WeatherIcons` + plot.js wind-arrow convention.
+
 - `js/overviewPanel.js` → Calendar overview panel
   - Async render; fetches BrightSky past days for current week in parallel.
   - 7-column Mon–Sun grid; `min-width: 980px` container + `#plot overflow-x: auto`.
@@ -63,7 +69,7 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 - Query params define the entire app state:
   - `lat`, `lon`, `name` (location)
   - `model` (one of `models[].id` in `main.js`)
-  - `panel` (`compare`, `temperature`, `uv_wind`, `overview`, `actuals`) — default `compare`
+  - `panel` (`compare`, `temperature`, `uv_wind`, `overview`, `actuals`, `hourly`) — default `compare`
   - `view` (`1d`, `2d`, `5d`, `all`)
 - Always use `updateUrlWithAppState()` when programmatically changing selections to keep history, back/forward, and deep links consistent.
 - `popstate` handler restores selections and triggers a re‑render; `restoreViewFromUrl(view)` handles `view` after render.

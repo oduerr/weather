@@ -370,6 +370,18 @@ window.OverviewPanel = {
         : 'box-shadow:0 2px 8px rgba(0,0,0,0.1)',
     ].join(';');
 
+    // Forecast day cards are clickable → jump to the Hourly panel for that day.
+    // Past (observed) days have no hourly forecast, so they stay non-interactive.
+    if (!isPast && day.date) {
+      card.style.cursor = 'pointer';
+      card.title = 'Show hourly forecast for this day';
+      card.addEventListener('click', () => {
+        window._hourlyScrollDate = day.date;
+        const sel = document.getElementById('panelSelect');
+        if (sel) { sel.value = 'hourly'; sel.dispatchEvent(new Event('change')); }
+      });
+    }
+
     // Day header
     const dayHeader = document.createElement('div');
     dayHeader.style.cssText = `

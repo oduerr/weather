@@ -253,6 +253,18 @@ window.VisRegistry = {
     plot.appendChild(container);
   },
 
+  /**
+   * Hourly panel visualizer
+   * Renders swipeable hour tiles (symbol, temp, UV, wind, precipitation). No Plotly.
+   */
+  hourly: function(data, location, model, config = {}) {
+    if (!window.HourlyPanel || !window.HourlyPanel.render) {
+      console.error('HourlyPanel module not available');
+      return;
+    }
+    window.HourlyPanel.render(data, location, model, config);
+  },
+
   compare: function(data, location, model, config = {}) {
     if (!window.ComparePanel || !window.ComparePanel.render) {
       console.error('ComparePanel module not available');

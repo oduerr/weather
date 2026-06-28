@@ -486,7 +486,9 @@ window.fetchAndPlot = async function fetchAndPlot() {
   if (selectedLoc && selectedLoc.name === "Konstanz") {
       window.WeatherAPI.fetchKonstanzWeather((airTemp, waterTemp) => {
           if (isNaN(airTemp) || airTemp === "N/A") {
-              document.getElementById("konstanzTemperature").textContent = "Weather data unavailable";
+              // Station/air-temp feed unavailable (often CORS-blocked) — fail quietly
+              // rather than showing an alarming message in the control bar.
+              document.getElementById("konstanzTemperature").textContent = "";
           } else {
               document.getElementById("konstanzTemperature").textContent =
                   "Current Temperature: " + airTemp + "°C";

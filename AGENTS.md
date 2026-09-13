@@ -21,8 +21,19 @@ This file captures project knowledge and guardrails so agents can make safe, hig
   - Styles for mobile‑friendly controls and a fullscreen plot area.
   - Persistent, fixed `#fade-button` at top‑right to manually toggle `#controls` visibility.
   
+- `js/storage.js` → Namespaced `localStorage` wrapper (`window.WeatherStorage`)
+  - Must load **before** `api.js`. Every key this app writes is prefixed `weather:`
+    (caches: `weather:cache:`), because `oduerr.github.io` is one origin for all
+    GitHub Pages projects and unprefixed keys collide with them.
+  - The prefix isolates key names, **not quota** — the ~5 MB budget is per origin.
+    So `setCached()` also keeps the namespace under `BUDGET_CHARS` (1.5M chars),
+    evicting oldest-first, and never throws: a full bucket costs the cache, not
+    the render. Preferences written with `set()` are never evicted.
+  - Migrates and removes the legacy unprefixed keys (`weatherDataCache`, `meta_*`)
+    on load.
+
 - `js/api.js` → Data layer
-  - Caching via `localStorage` (1h). Live fetch with fixture fallback.
+  - Caching via `WeatherStorage` (1h). Live fetch with fixture fallback.
   - Forecast: Open‑Meteo (deterministic vs ensemble endpoints/variables).
   - Observations: Konstanz station + BrightSky (Konstanz only).
   
@@ -114,7 +125,16 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 ## Caching and fixture fallback
 
-- Forecast cache key: `${lat},${lon},${model.id}`; TTL 1 hour.
+- All storage goes through `window.WeatherStorage`; never call `localStorage`
+  directly, or the key escapes the `weather:` namespace.
+- Forecast cache key: `forecast:${lat},${lon},${model.id}`; model metadata:
+  `meta:${folder}:${type}`. TTL 1 hour, one entry per key.
+- One entry per location+model matters: a 16-day ensemble response is large
+  (ECMWF EPS ≈ 860 KB, GFS ≈ 550 KB, ICON D2 EPS ≈ 390 KB, deterministic ≈ 40 KB),
+  so a single blob holding all of them overflowed the quota after a few place
+  switches and surfaced as a bogus "Open-Meteo forecast unavailable" banner.
+- Debug from the console: `WeatherStorage.usage()` (characters used by this app
+  and by the whole origin), `WeatherStorage.clearCache()`, `WeatherStorage.clearAll()`.
 
 ---
 
@@ -128,6 +148,8 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 - Do
   - Use existing globals and patterns; avoid ES module imports to keep file:// compatibility.
+  - Persist through `WeatherStorage`, not raw `localStorage`, and treat every cache
+    write as best effort — a failed write must never block a render.
   - Update URL via `updateUrlWithAppState()` on any state change; preserve history.
   - Capture/apply viewport when replotting to preserve user zoom/pan.
   - Set `data-start-time`/`data-end-time` on the active plot container (`#plot` or `#compare-chart`) when Plotly is active.

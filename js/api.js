@@ -6,8 +6,9 @@
 // Create global API object
 window.WeatherAPI = {};
 
-// Cache configuration
-const CACHE_KEY = "weatherDataCache";
+// Cache configuration. Keys are namespaced by WeatherStorage (js/storage.js)
+// so this app does not share plain key names with the other projects on the
+// same origin.
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
 
 /**
@@ -435,18 +436,13 @@ window.WeatherAPI.fetchKonstanzWeather = function(callback) {
  * @returns {Promise<Object>} Forecast data object
  */
 window.WeatherAPI.getForecastData = async function(location, model) {
-  // Check cache first
-  const cacheKey = `${location.lat},${location.lon},${model.id}`;
-  const cachedData = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
-  
-  if (cachedData[cacheKey]) {
-    const cachedEntry = cachedData[cacheKey];
-    
-    // Check if cache is still valid
-    if (Date.now() - cachedEntry.timestamp < CACHE_EXPIRATION_MS) {
-      console.log("✅ Using cached forecast data for", location.name);
-      return cachedEntry.data;
-    }
+  // Check cache first. Each location+model is its own entry, so a large
+  // ensemble response can be evicted without rewriting every other forecast.
+  const cacheKey = `forecast:${location.lat},${location.lon},${model.id}`;
+  const cached = window.WeatherStorage.getCached(cacheKey);
+  if (cached) {
+    console.log("✅ Using cached forecast data for", location.name);
+    return cached;
   }
 
   // If no valid cache, fetch new data
@@ -504,8 +500,9 @@ window.WeatherAPI.getForecastData = async function(location, model) {
     const data = await response.json();
     if (data.error) throw new Error(`Open-Meteo: ${data.reason || JSON.stringify(data)}`);
 
-    cachedData[cacheKey] = { data, timestamp: Date.now() };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cachedData));
+    // Caching is best effort — setCached never throws, so a full storage
+    // bucket costs us the cache but not the forecast.
+    window.WeatherStorage.setCached(cacheKey, data, CACHE_EXPIRATION_MS);
     return data;
   } catch (error) {
     console.error("Error fetching forecast data:", error);
@@ -709,17 +706,10 @@ window.WeatherAPI.getModelMetadata = async function(model) {
     ? (ENSEMBLE_METADATA_PATHS[model.model] || model.model)
     : (METADATA_PATHS[model.model] || model.model);
 
-  // Use cache in localStorage (1h TTL)
-  const cacheKey = `meta_${folderName}_${isEnsemble ? 'ensemble' : 'deterministic'}`;
-  const cachedMeta = localStorage.getItem(cacheKey);
-  if (cachedMeta) {
-    try {
-      const entry = JSON.parse(cachedMeta);
-      if (Date.now() - entry.timestamp < 3600000) { // 1h
-        return entry.data;
-      }
-    } catch(e) {}
-  }
+  // Use cache in WeatherStorage (1h TTL)
+  const cacheKey = `meta:${folderName}:${isEnsemble ? 'ensemble' : 'deterministic'}`;
+  const cachedMeta = window.WeatherStorage.getCached(cacheKey);
+  if (cachedMeta) return cachedMeta;
 
   const domain = isEnsemble ? "ensemble-api.open-meteo.com" : "api.open-meteo.com";
   const url = `https://${domain}/data/${folderName}/static/meta.json`;
@@ -727,7 +717,7 @@ window.WeatherAPI.getModelMetadata = async function(model) {
     const res = await fetch(url);
     if (!res.ok) throw new Error("Metadata API returned " + res.status);
     const data = await res.json();
-    localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+    window.WeatherStorage.setCached(cacheKey, data, CACHE_EXPIRATION_MS);
     return data;
   } catch(err) {
     console.error("Failed to load model metadata:", err);

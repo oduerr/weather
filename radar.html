@@ -1565,12 +1565,12 @@
             const btnToggleLinks = document.getElementById('btnToggleLinks');
 
             // Restore states from localStorage on initialization
-            const linksCollapsed = localStorage.getItem('radar_links_collapsed') === 'true';
+            const linksCollapsed = localStorage.getItem('weather:radar_links_collapsed') === 'true';
             if (linksCollapsed) {
                 externalPanel.classList.add('collapsed');
             }
 
-            const dashboardCompact = localStorage.getItem('radar_dashboard_compact') === 'true';
+            const dashboardCompact = localStorage.getItem('weather:radar_dashboard_compact') === 'true';
             if (dashboardCompact) {
                 dashboard.classList.add('compact');
                 svgMin.style.display = 'none';
@@ -1590,7 +1590,7 @@
             // Toggle Compact Mode
             btnToggleCompact.addEventListener('click', () => {
                 const isCompact = dashboard.classList.toggle('compact');
-                localStorage.setItem('radar_dashboard_compact', isCompact);
+                localStorage.setItem('weather:radar_dashboard_compact', isCompact);
                 if (isCompact) {
                     svgMin.style.display = 'none';
                     svgMax.style.display = 'block';
@@ -1603,7 +1603,7 @@
             // Toggle Links Panel
             btnToggleLinks.addEventListener('click', () => {
                 const isCollapsed = externalPanel.classList.toggle('collapsed');
-                localStorage.setItem('radar_links_collapsed', isCollapsed);
+                localStorage.setItem('weather:radar_links_collapsed', isCollapsed);
             });
 
             // Basemap toggling

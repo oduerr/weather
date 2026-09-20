@@ -21,6 +21,18 @@ This file captures project knowledge and guardrails so agents can make safe, hig
   - Styles for mobile‑friendly controls and a fullscreen plot area.
   - Persistent, fixed `#fade-button` at top‑right to manually toggle `#controls` visibility.
   
+- `manifest.json` + `icon.svg` / `icon-180.png` / `icon-512.png` → Installable app (PWA)
+  - Makes the page installable via "Add to Home Screen" / Chrome's install prompt,
+    the same manifest-only setup the `radtour` page uses. **No service worker** —
+    Chrome dropped that requirement (Android 109+, desktop 110+), and there is no
+    offline mode: Plotly loads from a CDN and forecasts need the network.
+  - `scope` / `start_url` are `"."`, so the whole `/weather/` directory (including
+    `radar.html`) stays inside the installed app.
+  - Regenerate the PNGs from the SVG with:
+    `rsvg-convert -w 180 -h 180 icon.svg -o icon-180.png` (and `-w 512 -h 512`).
+    Keep artwork inside the 20-80 box of the 100x100 viewBox so the `maskable`
+    icon is not clipped on Android.
+
 - `js/storage.js` → Namespaced `localStorage` wrapper (`window.WeatherStorage`)
   - Must load **before** `api.js`. Every key this app writes is prefixed `weather:`
     (caches: `weather:cache:`), because `oduerr.github.io` is one origin for all

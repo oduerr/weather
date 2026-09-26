@@ -25,7 +25,7 @@ const PANEL_CONFIG = {
     enabled: true,
     title: 'Temperature',
     description: 'Temperature forecast with ensemble data',
-    defaultView: '2d',
+    defaultView: '1d',
     showEnsemble: true,
     showCurrent: true
   },
@@ -349,10 +349,8 @@ if (urlParams.panel && panelSelect) {
     panelSelect.value = urlParams.panel;
   }
 } else if (panelSelect) {
-  // Default panel: Overview on mobile (touch-friendly, links into Hourly),
-  // Compare on larger screens. Breakpoint matches the CSS mobile media query.
-  const isMobile = window.matchMedia('(max-width: 768px)').matches;
-  panelSelect.value = isMobile ? 'overview' : 'compare';
+  // Default panel: Temperature, showing today's forecast (1d range).
+  panelSelect.value = 'temperature';
 }
 
 function updateModelRowVisibility() {

@@ -175,7 +175,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const traceTemp = { x: timesLocal, y: temperature, mode: 'lines', name: 'Temperature (°C)', line: { color: 'red' }, yaxis: "y1" };
   if (window.WeatherPlot._showDewPoint === undefined) window.WeatherPlot._showDewPoint = false;
   const traceDew = { x: timesLocal, y: dewPoint, mode: 'lines', name: 'Dew Point (°C)', line: { color: 'blue', width: 2, dash: 'dot' }, opacity: 0.6, yaxis: "y2", visible: window.WeatherPlot._showDewPoint };
-  const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1" };
+  const traceIcons = { x: timesLocal, y: temperature.map(t => t + 1), mode: 'text', text: weatherIcons, textfont: { size: 18 }, name: 'Weather', yaxis: "y1", hoverinfo: 'skip' };
 
   // Observed temperature traces (Konstanz only): fogcast station + BrightSky
   let weatherStationTraces = [];
@@ -272,7 +272,8 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       text: weatherCodeModeIcons,
       textfont: { size: 20, color: 'purple' },
       name: 'Weather Code Mode',
-      yaxis: "y1"
+      yaxis: "y1",
+      hoverinfo: 'skip'
     }];
   }
 
@@ -409,6 +410,44 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     };
   });
 
+  // Daily min/max temperature labels on the curve.
+  // Max sits above the weather symbol (which is at temp+1 in data units, ~18px tall),
+  // min sits just below the curve. Pixel yshifts keep them visible near the axis edges.
+  const dailyExtremes = {};
+  timesLocal.forEach((t, i) => {
+    const v = temperature[i];
+    if (v == null || Number.isNaN(v)) return;
+    const day = t.split("T")[0];
+    const g = dailyExtremes[day] || (dailyExtremes[day] = { maxVal: -Infinity, maxIdx: -1, minVal: Infinity, minIdx: -1 });
+    if (v > g.maxVal) { g.maxVal = v; g.maxIdx = i; }
+    if (v < g.minVal) { g.minVal = v; g.minIdx = i; }
+  });
+  const dailyMinMaxAnnotations = [];
+  Object.values(dailyExtremes).forEach(g => {
+    if (g.maxIdx >= 0) {
+      dailyMinMaxAnnotations.push({
+        x: timesLocal[g.maxIdx], y: g.maxVal,
+        xref: "x", yref: "y1",
+        text: `<b>${g.maxVal.toFixed(1)}°</b>`,
+        showarrow: false,
+        yshift: 38,
+        font: { size: compact ? 11 : 13, color: "#B00020" },
+        align: "center"
+      });
+    }
+    if (g.minIdx >= 0) {
+      dailyMinMaxAnnotations.push({
+        x: timesLocal[g.minIdx], y: g.minVal,
+        xref: "x", yref: "y1",
+        text: `<b>${g.minVal.toFixed(1)}°</b>`,
+        showarrow: false,
+        yshift: -14,
+        font: { size: compact ? 11 : 13, color: "#1E3A8A" },
+        align: "center"
+      });
+    }
+  });
+
   let titleSuffix = "";
   if (forecast.model_metadata && forecast.model_metadata.last_run_initialisation_time && window.WeatherAPI && window.WeatherAPI.formatInitTime) {
     titleSuffix = ` | 🕒 Run: ${window.WeatherAPI.formatInitTime(forecast.model_metadata.last_run_initialisation_time)}`;
@@ -452,7 +491,7 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     shapes: [...nightShading, shapeNow, ...lastObsShapes],
     showlegend: false,
     dragmode: false,
-    annotations: [...weekdayAnnotations, ...lastObsAnnotations]
+    annotations: [...weekdayAnnotations, ...lastObsAnnotations, ...dailyMinMaxAnnotations]
   };
 
   Plotly.newPlot('plot', allTraces, layout, { displayModeBar: false, doubleClick: false, scrollZoom: false }).then(() => {

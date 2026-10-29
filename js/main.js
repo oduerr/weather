@@ -449,6 +449,16 @@ function showForecastError(message) {
 }
 
 window.fetchAndPlot = async function fetchAndPlot() {
+  // Loading card with one line per data source (js/loadStatus.js)
+  const loadId = window.LoadStatus ? window.LoadStatus.start() : 0;
+  try {
+    await fetchAndPlotInner();
+  } finally {
+    if (window.LoadStatus) window.LoadStatus.done(loadId);
+  }
+};
+
+async function fetchAndPlotInner() {
 
 
   // Get selected location with proper fallback handling
@@ -586,7 +596,7 @@ window.fetchAndPlot = async function fetchAndPlot() {
     console.error("Error fetching data:", err);
     showForecastError(err.message || 'Unknown error — check your connection.');
   }
-};
+}
 
 // ------------------------------
 // 4) Process Data & Plot (Using Plotly.js)

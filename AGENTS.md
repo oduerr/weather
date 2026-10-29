@@ -44,8 +44,16 @@ This file captures project knowledge and guardrails so agents can make safe, hig
   - Migrates and removes the legacy unprefixed keys (`weatherDataCache`, `meta_*`)
     on load.
 
+- `js/loadStatus.js` → Loading card (`window.LoadStatus`)
+  - `fetchAndPlot()` calls `start()`/`done(id)`; `api.js` wraps each request in
+    `track(label, promise, isOk)`, so the card lists every source with ⏳/✓/✗ and
+    its time. Appears only after 400 ms, so cached renders do not flash.
+
 - `js/api.js` → Data layer
   - Caching via `WeatherStorage` (1h). Live fetch with fixture fallback.
+  - Konstanz observations (FogCast station, BrightSky, PegelOnline) give up after
+    `OBS_TIMEOUT_MS` (8 s) and render without that source. The FogCast station
+    API sometimes never answers, and the page used to stay blank while it waited.
   - Forecast: Open‑Meteo (deterministic vs ensemble endpoints/variables).
   - Observations: Konstanz station + BrightSky (Konstanz only).
   

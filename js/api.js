@@ -11,6 +11,24 @@ window.WeatherAPI = {};
 // same origin.
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
 
+// Observations are extras on top of the forecast: stop waiting for a source
+// after this long and render without it. (The FogCast station API sometimes
+// does not answer at all, which used to leave the page blank.)
+const OBS_TIMEOUT_MS = 8000;
+
+/** Resolve to `fallback` if `promise` takes longer than `ms`. */
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve(fallback), ms))
+  ]);
+}
+
+/** LoadStatus.track if the loading indicator is present, else pass through. */
+function trackLoad(label, promise, isOk) {
+  return window.LoadStatus ? window.LoadStatus.track(label, promise, isOk) : promise;
+}
+
 /**
  * Fetch weather station data from Konstanz weather station
  * @param {string} startTime - Start time in ISO format
@@ -615,10 +633,16 @@ window.WeatherAPI.getObservationData = async function(location) {
     const currentDate = nowBerlin.split('T')[0];
     
     try {
+      const hasValues = d => d && d.temperature && d.temperature.some(Number.isFinite);
       const [stationData, brightSkyData, pegelData] = await Promise.all([
-        window.WeatherAPI.getKonstanzWeatherStationData(currentDate),
-        window.WeatherAPI.getBrightSkyObservationData(currentDate),
-        window.WeatherAPI.fetchPegelKonstanz()
+        trackLoad('FogCast station',
+          withTimeout(window.WeatherAPI.getKonstanzWeatherStationData(currentDate), OBS_TIMEOUT_MS, null),
+          hasValues),
+        trackLoad('BrightSky (DWD)',
+          withTimeout(window.WeatherAPI.getBrightSkyObservationData(currentDate), OBS_TIMEOUT_MS, null),
+          hasValues),
+        trackLoad('Lake level (PegelOnline)',
+          withTimeout(window.WeatherAPI.fetchPegelKonstanz(), OBS_TIMEOUT_MS, null))
       ]);
 
       // Compute last observation time from BrightSky (if available)
@@ -739,9 +763,11 @@ window.WeatherAPI.getWeatherData = async function(location, model) {
   let forecastData = null;
   let forecastError = null;
   try {
-    forecastData = await window.WeatherAPI.getForecastData(location, model);
+    forecastData = await trackLoad(`Open-Meteo forecast (${model.label || model.id})`,
+      window.WeatherAPI.getForecastData(location, model));
     try {
-      const metadata = await window.WeatherAPI.getModelMetadata(model);
+      const metadata = await trackLoad('Model run info',
+        window.WeatherAPI.getModelMetadata(model));
       if (metadata) forecastData.model_metadata = metadata;
     } catch (metaErr) {
       console.warn("Could not load model metadata:", metaErr);

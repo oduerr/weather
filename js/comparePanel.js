@@ -758,7 +758,7 @@ window.ComparePanel = {
     return uniqueDays.map(day => {
       const d = new Date(`${day}T12:00:00`);
       return {
-        x: `${day}T12:00`, y: 1.02,
+        x: `${day}T12:00`, y: 1, yanchor: 'bottom', yshift: 2,
         xref: 'x', yref: 'paper',
         text: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
         showarrow: false,

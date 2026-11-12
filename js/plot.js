@@ -362,10 +362,10 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
       xref: 'x',
       yref: 'paper',
       text: 'last obs',
-      showarrow: true,
-      arrowhead: 2,
-      ax: 0,
-      ay: -20,
+      showarrow: false,
+      yanchor: 'top',
+      xanchor: 'right',
+      xshift: -2,
       font: { size: 10, color: 'gray' }
     });
   }
@@ -401,7 +401,9 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
     const noonTime = new Date(`${day}T12:00:00`);
     return {
       x: noonTime.toISOString(),
-      y: 1.05,
+      // Pixel-anchored just above the plot area so it never gets clipped
+      // (paper-relative offsets like y:1.05 overflow the top margin on tall screens).
+      y: 1, yanchor: "bottom", yshift: 2,
       xref: "x", yref: "paper",
       text: noonTime.toLocaleDateString("en-US", { weekday: compact ? "short" : "long" }),
       showarrow: false,
@@ -456,13 +458,14 @@ window.WeatherPlot.renderWeatherData = async function(data, location, model, sel
   const layout = {
     title: compact ? { text: '' } : {
       text: `📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} ${model.label} – ${location.name}${titleSuffix}`,
-      x: 0.05, y: -0.05, xanchor: "left", font: { size: 12 },
+      x: 0.05, xanchor: "left", y: 1, yref: "container", yanchor: "top", pad: { t: 6 }, font: { size: 12 },
     },
     width: window.innerWidth,
     height: window.innerHeight * 0.98,
+    // Top margin holds the info title (desktop) plus the weekday row above the plot.
     margin: compact
-      ? { l: 32, r: 32, t: 40, b: 42 }
-      : { l: 60, r: 60, t: 40, b: 55 },
+      ? { l: 32, r: 32, t: 36, b: 42 }
+      : { l: 60, r: 60, t: 64, b: 55 },
 
     xaxis: {
       title: compact ? '' : 'Time (CET/CEST)',
@@ -857,10 +860,10 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
       xref: 'x',
       yref: 'paper',
       text: 'last obs',
-      showarrow: true,
-      arrowhead: 2,
-      ax: 0,
-      ay: -20,
+      showarrow: false,
+      yanchor: 'top',
+      xanchor: 'right',
+      xshift: -2,
       font: { size: 10, color: 'gray' }
     });
   }
@@ -889,7 +892,10 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
     const noonTime = new Date(`${day}T12:00:00`);
     return {
       x: noonTime.toISOString(),
-      y: 1.05, xref: "x", yref: "paper",
+      // Pixel-anchored just above the plot area so it never gets clipped
+      // (paper-relative offsets like y:1.05 overflow the top margin on tall screens).
+      y: 1, yanchor: "bottom", yshift: 2,
+      xref: "x", yref: "paper",
       text: noonTime.toLocaleDateString("en-US", { weekday: compact ? "short" : "long" }),
       showarrow: false,
       font: { size: compact ? 11 : 14, color: "black", weight: "bold" },
@@ -905,13 +911,14 @@ window.WeatherPlot.renderUVWindData = async function(data, location, model) {
   const layout = {
     title: compact ? { text: '' } : {
       text: `${model.label} – ${location.name} 📍 ${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E, ⛰️ ${forecast.elevation || "N/A"}m | ☀️ ${sunrises[0] ? sunrises[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} – 🌙 ${sunsets[0] ? sunsets[0].toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}${titleSuffix}`,
-      x: 0.05, y: -0.05, xanchor: "left", font: { size: 12 },
+      x: 0.05, xanchor: "left", y: 1, yref: "container", yanchor: "top", pad: { t: 6 }, font: { size: 12 },
     },
     width: window.innerWidth,
     height: Math.max(window.innerHeight - 120, 400),
+    // Top margin holds the info title (desktop) plus the weekday row above the plot.
     margin: compact
-      ? { l: 32, r: 32, t: 40, b: 42 }
-      : { l: 60, r: 60, t: 40, b: 55 },
+      ? { l: 32, r: 32, t: 36, b: 42 }
+      : { l: 60, r: 60, t: 64, b: 55 },
 
     xaxis: {
       title: compact ? '' : 'Time (CET/CEST)',

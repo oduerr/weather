@@ -1,2 +1,9 @@
 .DS_Store
 /.playwright-cli
+
+# verify_fogcast_models.py: cached API responses and local HTML reports
+.fogcast-cache/
+/fogcast-report*.html
+/fogcast-data/
+__pycache__/
+/fogcast-artifact*.html

@@ -448,13 +448,23 @@ function showForecastError(message) {
   setTimeout(() => banner.remove(), 15000);
 }
 
+let latestPlotId = 0;
 window.fetchAndPlot = async function fetchAndPlot() {
+  const plotId = ++latestPlotId;
   // Loading card with one line per data source (js/loadStatus.js)
   const loadId = window.LoadStatus ? window.LoadStatus.start() : 0;
   try {
     await fetchAndPlotInner();
   } finally {
     if (window.LoadStatus) window.LoadStatus.done(loadId);
+  }
+  // Observations that were too slow (see OBS_WAIT_MS in api.js): redraw once
+  // when they arrive, unless a newer render has taken over in the meantime.
+  const late = window.WeatherAPI.lateObservations && window.WeatherAPI.lateObservations();
+  if (late) {
+    late.then(gotData => {
+      if (gotData && plotId === latestPlotId) window.fetchAndPlot();
+    });
   }
 };
 

@@ -11,10 +11,41 @@ window.WeatherAPI = {};
 // same origin.
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
 
-// Observations are extras on top of the forecast: stop waiting for a source
-// after this long and render without it. (The FogCast station API sometimes
-// does not answer at all, which used to leave the page blank.)
-const OBS_TIMEOUT_MS = 8000;
+// Observations are extras on top of the forecast. The FogCast station API is
+// often down and then never answers, which used to leave the page blank. So:
+// - render after at most OBS_WAIT_MS without the sources still missing; they
+//   keep loading, and main.js redraws once when one of them arrives;
+// - keep every result, failures included, in memory for OBS_REUSE_MS, so
+//   switching views does not ask (or wait for) a dead source again.
+const OBS_WAIT_MS = 2000;
+const OBS_GIVE_UP_MS = 30000;              // no answer by then = source is down
+const OBS_REUSE_MS = 10 * 60 * 1000;
+
+// label -> { date, startedAt, promise, settled, value, ok }
+const obsRequests = {};
+
+/** Start (or reuse) the request for one observation source. */
+function observe(label, date, fetchFn, isOk = v => v != null) {
+  let r = obsRequests[label];
+  if (!r || r.date !== date || Date.now() - r.startedAt > OBS_REUSE_MS) {
+    r = { date, startedAt: Date.now(), settled: false, value: null, ok: false };
+    r.promise = trackLoad(label, withTimeout(fetchFn(), OBS_GIVE_UP_MS, null), isOk)
+      .catch(() => null)
+      .then(v => { r.settled = true; r.value = v; r.ok = isOk(v); return v; });
+    obsRequests[label] = r;
+  }
+  return r;
+}
+
+/**
+ * Promise for the observation requests still running, resolving to true if
+ * at least one of them brought data; null if nothing is pending.
+ */
+window.WeatherAPI.lateObservations = function() {
+  const pending = Object.values(obsRequests).filter(r => !r.settled);
+  if (pending.length === 0) return null;
+  return Promise.all(pending.map(r => r.promise)).then(() => pending.some(r => r.ok));
+};
 
 /** Resolve to `fallback` if `promise` takes longer than `ms`. */
 function withTimeout(promise, ms, fallback) {
@@ -634,16 +665,19 @@ window.WeatherAPI.getObservationData = async function(location) {
     
     try {
       const hasValues = d => d && d.temperature && d.temperature.some(Number.isFinite);
-      const [stationData, brightSkyData, pegelData] = await Promise.all([
-        trackLoad('FogCast station',
-          withTimeout(window.WeatherAPI.getKonstanzWeatherStationData(currentDate), OBS_TIMEOUT_MS, null),
-          hasValues),
-        trackLoad('BrightSky (DWD)',
-          withTimeout(window.WeatherAPI.getBrightSkyObservationData(currentDate), OBS_TIMEOUT_MS, null),
-          hasValues),
-        trackLoad('Lake level (PegelOnline)',
-          withTimeout(window.WeatherAPI.fetchPegelKonstanz(), OBS_TIMEOUT_MS, null))
-      ]);
+      const reqs = [
+        observe('FogCast station', currentDate,
+          () => window.WeatherAPI.getKonstanzWeatherStationData(currentDate), hasValues),
+        observe('BrightSky (DWD)', currentDate,
+          () => window.WeatherAPI.getBrightSkyObservationData(currentDate), hasValues),
+        observe('Lake level (PegelOnline)', currentDate,
+          () => window.WeatherAPI.fetchPegelKonstanz())
+      ];
+      // Wait until OBS_WAIT_MS after the requests started -- on a view switch
+      // that time has usually passed, so there is no wait at all.
+      const waitUntil = Math.max(...reqs.map(r => r.startedAt)) + OBS_WAIT_MS;
+      await withTimeout(Promise.all(reqs.map(r => r.promise)), Math.max(0, waitUntil - Date.now()), null);
+      const [stationData, brightSkyData, pegelData] = reqs.map(r => r.value);
 
       // Compute last observation time from BrightSky (if available)
       let lastObsTime = null;

@@ -51,9 +51,12 @@ This file captures project knowledge and guardrails so agents can make safe, hig
 
 - `js/api.js` → Data layer
   - Caching via `WeatherStorage` (1h). Live fetch with fixture fallback.
-  - Konstanz observations (FogCast station, BrightSky, PegelOnline) give up after
-    `OBS_TIMEOUT_MS` (8 s) and render without that source. The FogCast station
-    API sometimes never answers, and the page used to stay blank while it waited.
+  - Konstanz observations (FogCast station, BrightSky, PegelOnline): the render
+    waits at most `OBS_WAIT_MS` (2 s); slower sources keep loading (give up after
+    30 s) and `fetchAndPlot()` redraws once when one brings data
+    (`WeatherAPI.lateObservations()`). Results, failures included, stay in memory
+    for 10 min, so switching views neither re-asks nor waits for a dead source.
+    The FogCast station API is often down and never answers.
   - Forecast: Open‑Meteo (deterministic vs ensemble endpoints/variables).
   - Observations: Konstanz station + BrightSky (Konstanz only).
   
